@@ -361,9 +361,7 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
         conf.put(TransactionIsolationLevel.CONF_KEY,
                  dbSinkConfig.getTransactionIsolationLevel());
       }
-      if (dbSinkConfig.connectionArguments != null) {
-        conf.put(DBUtils.CONNECTION_ARGUMENTS, dbSinkConfig.connectionArguments);
-      }
+      conf.put(DBUtils.CONNECTION_ARGUMENTS, dbSinkConfig.getConnectionArgumentsString());
       conf.put(DBConfiguration.DRIVER_CLASS_PROPERTY, driverClass.getName());
       conf.put(DBConfiguration.URL_PROPERTY, connectionString);
       if (dbSinkConfig.user != null) {

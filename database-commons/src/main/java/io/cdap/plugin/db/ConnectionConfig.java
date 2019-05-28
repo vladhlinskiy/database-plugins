@@ -113,6 +113,19 @@ public abstract class ConnectionConfig extends PluginConfig {
   }
 
   /**
+   * Returns all configuration properties including database-specific ones as single string.
+   * In the case when there are no connection arguments, empty string will be returned.
+   * @return connection arguments as string with '=' as key-value delimiter and ';' as pair delimiter.
+   */
+  public String getConnectionArgumentsString() {
+    return (this.connectionArguments != null)
+      ? (!getDBSpecificArgumentsString().isEmpty())
+        ? this.connectionArguments + ";" + this.getDBSpecificArgumentsString()
+        : this.connectionArguments
+      : this.getDBSpecificArgumentsString();
+  }
+
+  /**
    * Constructs a connection string from host, port and database properties in a database-specific format.
    * @return connection string specific to a particular database.
    */
@@ -128,6 +141,7 @@ public abstract class ConnectionConfig extends PluginConfig {
 
   /**
    * Returns database-specific configuration properties as single string.
+   * In the case when there are no database-specific arguments, empty string will be returned.
    * @return additional connection arguments as string with '=' as key-value delimiter and ';' as pair delimiter.
    */
   protected String getDBSpecificArgumentsString() {

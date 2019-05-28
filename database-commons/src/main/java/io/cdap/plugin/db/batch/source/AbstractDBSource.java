@@ -59,7 +59,6 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Map;
 import java.util.Properties;
 import javax.annotation.Nullable;
 
@@ -222,14 +221,7 @@ public abstract class AbstractDBSource extends ReferenceBatchSource<LongWritable
       hConf.set(TransactionIsolationLevel.CONF_KEY,
                 sourceConfig.getTransactionIsolationLevel());
     }
-    if (sourceConfig.connectionArguments != null || !sourceConfig.getDBSpecificArguments().isEmpty()) {
-      String allConnectionArguments = (sourceConfig.connectionArguments != null)
-        ? (!sourceConfig.getDBSpecificArgumentsString().isEmpty())
-          ? sourceConfig.connectionArguments + ";" + sourceConfig.getDBSpecificArgumentsString()
-          : sourceConfig.connectionArguments
-        : sourceConfig.getDBSpecificArgumentsString();
-      hConf.set(DBUtils.CONNECTION_ARGUMENTS, allConnectionArguments);
-    }
+    hConf.set(DBUtils.CONNECTION_ARGUMENTS, sourceConfig.getConnectionArgumentsString());
     if (sourceConfig.numSplits == null || sourceConfig.numSplits != 1) {
       if (!sourceConfig.getImportQuery().contains("$CONDITIONS")) {
         throw new IllegalArgumentException(String.format("Import Query %s must contain the string '$CONDITIONS'.",
@@ -408,16 +400,6 @@ public abstract class AbstractDBSource extends ReferenceBatchSource<LongWritable
         throw new IllegalArgumentException(String.format("Unable to parse schema '%s'. Reason: %s",
                                                          schema, e.getMessage()), e);
       }
-    }
-
-    @Override
-    protected Map<String, String> getDBSpecificArguments() {
-      return super.getDBSpecificArguments();
-    }
-
-    @Override
-    protected String getDBSpecificArgumentsString() {
-      return super.getDBSpecificArgumentsString();
     }
   }
 
