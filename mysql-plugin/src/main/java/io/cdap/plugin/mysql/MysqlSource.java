@@ -68,6 +68,31 @@ public class MysqlSource extends AbstractDBSource {
     @Nullable
     public Boolean sqlMode;
 
+    @Name(MysqlConstants.USE_SSL)
+    @Description("Turns on SSL encryption. Connection will fail if SSL is not available")
+    @Nullable
+    public String useSSL;
+
+    @Name(MysqlConstants.CLIENT_CERT_KEYSTORE_URL)
+    @Description("URL to the client certificate KeyStore (if not specified, use defaults)")
+    @Nullable
+    public String clientCertificateKeyStoreUrl;
+
+    @Name(MysqlConstants.CLIENT_CERT_KEYSTORE_PASSWORD)
+    @Description("Password for the client certificates KeyStore")
+    @Nullable
+    public String clientCertificateKeyStorePassword;
+
+    @Name(MysqlConstants.TRUST_CERT_KEYSTORE_URL)
+    @Description("URL to the trusted root certificate KeyStore (if not specified, use defaults)")
+    @Nullable
+    public String trustCertificateKeyStoreUrl;
+
+    @Name(MysqlConstants.TRUST_CERT_KEYSTORE_PASSWORD)
+    @Description("Password for the trusted root certificates KeyStore")
+    @Nullable
+    public String trustCertificateKeyStorePassword;
+
     @Override
     public String getConnectionString() {
       return String.format(MysqlConstants.MYSQL_CONNECTION_STRING_FORMAT, host, port, database);
@@ -85,6 +110,23 @@ public class MysqlSource extends AbstractDBSource {
       }
       if (sqlMode != null) {
         builder.put(MysqlConstants.SESSION_VARIABLES, String.format("%s='%s'", MysqlConstants.SQL_MODE, sqlMode));
+      }
+      if (MysqlConstants.REQUIRE_SSL_OPTION.equals(useSSL)) {
+        builder.put(MysqlConstants.USE_SSL, "true");
+      } else if (MysqlConstants.NO_SSL_OPTION.equals(useSSL)) {
+        builder.put(MysqlConstants.USE_SSL, "false");
+      }
+      if (clientCertificateKeyStoreUrl != null) {
+        builder.put(MysqlConstants.CLIENT_CERT_KEYSTORE_URL, String.valueOf(clientCertificateKeyStoreUrl));
+      }
+      if (clientCertificateKeyStorePassword != null) {
+        builder.put(MysqlConstants.CLIENT_CERT_KEYSTORE_PASSWORD, String.valueOf(clientCertificateKeyStorePassword));
+      }
+      if (trustCertificateKeyStoreUrl != null) {
+        builder.put(MysqlConstants.TRUST_CERT_KEYSTORE_URL, String.valueOf(trustCertificateKeyStoreUrl));
+      }
+      if (trustCertificateKeyStorePassword != null) {
+        builder.put(MysqlConstants.TRUST_CERT_KEYSTORE_PASSWORD, String.valueOf(trustCertificateKeyStorePassword));
       }
 
       return builder.build();

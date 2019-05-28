@@ -29,6 +29,13 @@ public final class MysqlConstants {
   public static final String USE_COMPRESSION = "useCompression";
   public static final String SESSION_VARIABLES = "sessionVariables";
   public static final String ALLOW_MULTIPLE_QUERIES = "allowMultiQueries";
+  public static final String USE_SSL = "useSSL";
+  public static final String NO_SSL_OPTION = "No";
+  public static final String REQUIRE_SSL_OPTION = "Require";
+  public static final String CLIENT_CERT_KEYSTORE_URL = "clientCertificateKeyStoreUrl";
+  public static final String CLIENT_CERT_KEYSTORE_PASSWORD = "clientCertificateKeyStorePassword";
+  public static final String TRUST_CERT_KEYSTORE_URL = "trustCertificateKeyStoreUrl";
+  public static final String TRUST_CERT_KEYSTORE_PASSWORD = "trustCertificateKeyStorePassword";
   public static final String MYSQL_CONNECTION_STRING_FORMAT = "jdbc:mysql://%s:%s/%s";
 
   /**

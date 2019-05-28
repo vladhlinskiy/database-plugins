@@ -59,6 +59,40 @@
       ]
     },
     {
+      "label": "SSL",
+      "properties": [
+        {
+          "label": "Use SSL",
+          "name": "useSSL",
+          "widget-type": "select",
+          "widget-attributes": {
+            "default": "If available",
+            "values": ["No", "If available", "Require"]
+          }
+        },
+        {
+          "widget-type": "textbox",
+          "label": "Keystore URL",
+          "name": "clientCertificateKeyStoreUrl"
+        },
+        {
+          "widget-type": "password",
+          "label": "Keystore password",
+          "name": "clientCertificateKeyStorePassword"
+        },
+        {
+          "widget-type": "textbox",
+          "label": "Truststore URL",
+          "name": "trustCertificateKeyStoreUrl"
+        },
+        {
+          "widget-type": "password",
+          "label": "Truststore password",
+          "name": "trustCertificateKeyStorePassword"
+        }
+      ]
+    },
+    {
       "label": "Advanced",
       "properties": [
         {
