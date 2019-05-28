@@ -26,6 +26,7 @@ public final class MysqlConstants {
 
   public static final String PLUGIN_NAME = "Mysql";
   public static final String AUTO_RECONNECT = "autoReconnect";
+  public static final String USE_COMPRESSION = "useCompression";
   public static final String ALLOW_MULTIPLE_QUERIES = "allowMultiQueries";
   public static final String MYSQL_CONNECTION_STRING_FORMAT = "jdbc:mysql://%s:%s/%s";
 }

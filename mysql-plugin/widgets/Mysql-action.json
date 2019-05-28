@@ -62,6 +62,25 @@
       "label": "Advanced",
       "properties": [
         {
+          "widget-type": "radio-group",
+          "label": "Use compression protocol",
+          "name": "useCompression",
+          "widget-attributes": {
+            "layout": "inline",
+            "default": "false",
+            "options": [
+              {
+                "id": "true",
+                "label": "True"
+              },
+              {
+                "id": "false",
+                "label": "False"
+              }
+            ]
+          }
+        },
+        {
           "widget-type": "keyvalue",
           "label": "Connection Arguments",
           "name": "connectionArguments",

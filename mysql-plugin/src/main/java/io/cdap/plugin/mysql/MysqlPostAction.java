@@ -52,6 +52,11 @@ public class MysqlPostAction extends AbstractQueryAction {
     @Nullable
     public Boolean autoReconnect;
 
+    @Name(MysqlConstants.USE_COMPRESSION)
+    @Description("Select this option for WAN connections")
+    @Nullable
+    public Boolean useCompression;
+
     @Override
     public String getConnectionString() {
       return String.format(MysqlConstants.MYSQL_CONNECTION_STRING_FORMAT, host, port, database);
@@ -64,7 +69,9 @@ public class MysqlPostAction extends AbstractQueryAction {
       if (autoReconnect != null) {
         builder.put(MysqlConstants.AUTO_RECONNECT, String.valueOf(autoReconnect));
       }
-      builder.put(MysqlConstants.ALLOW_MULTIPLE_QUERIES, String.valueOf(true));
+      if (useCompression != null) {
+        builder.put(MysqlConstants.USE_COMPRESSION, String.valueOf(useCompression));
+      }
 
       return builder.build();
     }

@@ -48,6 +48,7 @@ public class MysqlActionTestRun extends MysqlPluginTestBase {
       ImmutableMap.<String, String>builder()
         .putAll(BASE_PROPS)
         .put(MysqlConstants.AUTO_RECONNECT, "true")
+        .put(MysqlConstants.USE_COMPRESSION, "true")
         .put(QueryConfig.QUERY, "delete from dbActionTest where day = '${logicalStartTime(yyyy-MM-dd,0m,UTC)}'")
         .build(),
       null));

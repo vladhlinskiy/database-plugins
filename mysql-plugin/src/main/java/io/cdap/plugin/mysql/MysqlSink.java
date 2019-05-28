@@ -46,10 +46,16 @@ public class MysqlSink extends AbstractDBSink {
    * MySQL action configuration.
    */
   public static class MysqlSinkConfig extends DBSpecificSinkConfig {
+
     @Name(MysqlConstants.AUTO_RECONNECT)
     @Description("Should the driver try to re-establish stale and/or dead connections")
     @Nullable
     public Boolean autoReconnect;
+
+    @Name(MysqlConstants.USE_COMPRESSION)
+    @Description("Select this option for WAN connections")
+    @Nullable
+    public Boolean useCompression;
 
     @Override
     public String getConnectionString() {
@@ -58,11 +64,16 @@ public class MysqlSink extends AbstractDBSink {
 
     @Override
     public Map<String, String> getDBSpecificArguments() {
+      ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
+
       if (autoReconnect != null) {
-        return ImmutableMap.of(MysqlConstants.AUTO_RECONNECT, String.valueOf(autoReconnect));
-      } else {
-        return ImmutableMap.of();
+        builder.put(MysqlConstants.AUTO_RECONNECT, String.valueOf(autoReconnect));
       }
+      if (useCompression != null) {
+        builder.put(MysqlConstants.USE_COMPRESSION, String.valueOf(useCompression));
+      }
+
+      return builder.build();
     }
   }
 }

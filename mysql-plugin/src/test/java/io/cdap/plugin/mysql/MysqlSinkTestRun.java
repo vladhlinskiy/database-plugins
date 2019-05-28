@@ -61,6 +61,7 @@ public class MysqlSinkTestRun extends MysqlPluginTestBase {
       ImmutableMap.<String, String>builder()
         .putAll(BASE_PROPS)
         .put(MysqlConstants.AUTO_RECONNECT, "true")
+        .put(MysqlConstants.USE_COMPRESSION, "true")
         .put(AbstractDBSink.DBSinkConfig.TABLE_NAME, "MY_DEST_TABLE")
         .put(Constants.Reference.REFERENCE_NAME, "DBTest")
         .build(),
