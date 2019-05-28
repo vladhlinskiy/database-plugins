@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 /**
@@ -123,5 +124,15 @@ public abstract class ConnectionConfig extends PluginConfig {
    */
   protected Map<String, String> getDBSpecificArguments() {
     return Collections.emptyMap();
+  }
+
+  /**
+   * Returns database-specific configuration properties as single string.
+   * @return additional connection arguments as string with '=' as key-value delimiter and ';' as pair delimiter.
+   */
+  protected String getDBSpecificArgumentsString() {
+    return getDBSpecificArguments().entrySet().stream()
+      .map(e -> String.format("%s=%s", e.getKey(), e.getValue()))
+      .collect(Collectors.joining(";"));
   }
 }

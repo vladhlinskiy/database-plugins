@@ -59,6 +59,7 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Map;
 import java.util.Properties;
 import javax.annotation.Nullable;
 
@@ -148,9 +149,7 @@ public abstract class AbstractDBSource extends ReferenceBatchSource<LongWritable
     DriverCleanup driverCleanup
       = DBUtils.ensureJDBCDriverIsAvailable(driverClass, connectionString, sourceConfig.jdbcPluginName);
 
-    Properties properties = ConnectionConfig.getConnectionArguments(sourceConfig.connectionArguments, sourceConfig.user,
-                                                                    sourceConfig.password);
-
+    Properties properties = sourceConfig.getConnectionArguments();
     try (Connection connection = DriverManager.getConnection(connectionString, properties)) {
       return loadSchemaFromDB(connection, sourceConfig.importQuery);
     } finally {
@@ -223,8 +222,13 @@ public abstract class AbstractDBSource extends ReferenceBatchSource<LongWritable
       hConf.set(TransactionIsolationLevel.CONF_KEY,
                 sourceConfig.getTransactionIsolationLevel());
     }
-    if (sourceConfig.connectionArguments != null) {
-      hConf.set(DBUtils.CONNECTION_ARGUMENTS, sourceConfig.connectionArguments);
+    if (sourceConfig.connectionArguments != null || !sourceConfig.getDBSpecificArguments().isEmpty()) {
+      String allConnectionArguments = (sourceConfig.connectionArguments != null)
+        ? (!sourceConfig.getDBSpecificArgumentsString().isEmpty())
+          ? sourceConfig.connectionArguments + ";" + sourceConfig.getDBSpecificArgumentsString()
+          : sourceConfig.connectionArguments
+        : sourceConfig.getDBSpecificArgumentsString();
+      hConf.set(DBUtils.CONNECTION_ARGUMENTS, allConnectionArguments);
     }
     if (sourceConfig.numSplits == null || sourceConfig.numSplits != 1) {
       if (!sourceConfig.getImportQuery().contains("$CONDITIONS")) {
@@ -404,6 +408,16 @@ public abstract class AbstractDBSource extends ReferenceBatchSource<LongWritable
         throw new IllegalArgumentException(String.format("Unable to parse schema '%s'. Reason: %s",
                                                          schema, e.getMessage()), e);
       }
+    }
+
+    @Override
+    protected Map<String, String> getDBSpecificArguments() {
+      return super.getDBSpecificArguments();
+    }
+
+    @Override
+    protected String getDBSpecificArgumentsString() {
+      return super.getDBSpecificArgumentsString();
     }
   }
 
