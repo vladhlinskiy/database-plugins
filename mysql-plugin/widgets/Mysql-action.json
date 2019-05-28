@@ -81,6 +81,11 @@
           }
         },
         {
+          "widget-type": "textbox",
+          "label": "SQL_MODE",
+          "name": "sql_mode"
+        },
+        {
           "widget-type": "keyvalue",
           "label": "Connection Arguments",
           "name": "connectionArguments",

@@ -57,6 +57,11 @@ public class MysqlAction extends AbstractDBAction {
     @Nullable
     public Boolean useCompression;
 
+    @Name(MysqlConstants.SQL_MODE)
+    @Description("Override the default SQL_MODE session variable used by the server")
+    @Nullable
+    public Boolean sqlMode;
+
     @Override
     public String getConnectionString() {
       return String.format(MysqlConstants.MYSQL_CONNECTION_STRING_FORMAT, host, port, database);
@@ -71,6 +76,9 @@ public class MysqlAction extends AbstractDBAction {
       }
       if (useCompression != null) {
         builder.put(MysqlConstants.USE_COMPRESSION, String.valueOf(useCompression));
+      }
+      if (sqlMode != null) {
+        builder.put(MysqlConstants.SESSION_VARIABLES, String.format("%s='%s'", MysqlConstants.SQL_MODE, sqlMode));
       }
 
       return builder.build();

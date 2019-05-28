@@ -62,6 +62,7 @@ public class MysqlSinkTestRun extends MysqlPluginTestBase {
         .putAll(BASE_PROPS)
         .put(MysqlConstants.AUTO_RECONNECT, "true")
         .put(MysqlConstants.USE_COMPRESSION, "true")
+        .put(MysqlConstants.SQL_MODE, "ANSI_QUOTES,NO_ENGINE_SUBSTITUTION")
         .put(AbstractDBSink.DBSinkConfig.TABLE_NAME, "MY_DEST_TABLE")
         .put(Constants.Reference.REFERENCE_NAME, "DBTest")
         .build(),
