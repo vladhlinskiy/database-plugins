@@ -16,7 +16,6 @@
 
 package io.cdap.plugin.mysql;
 
-import com.google.common.collect.ImmutableMap;
 import io.cdap.cdap.api.annotation.Description;
 import io.cdap.cdap.api.annotation.Name;
 import io.cdap.cdap.api.annotation.Plugin;
@@ -31,7 +30,7 @@ import javax.annotation.Nullable;
  * Action that runs MySQL command.
  */
 @Plugin(type = Action.PLUGIN_TYPE)
-@Name(MysqlConstants.PLUGIN_NAME)
+@Name(MysqlUtil.PLUGIN_NAME)
 @Description("Action that runs a MySQL command")
 public class MysqlAction extends AbstractDBAction {
 
@@ -47,93 +46,69 @@ public class MysqlAction extends AbstractDBAction {
    */
   public static class MysqlActionConfig extends DBSpecificQueryConfig {
 
-    @Name(MysqlConstants.AUTO_RECONNECT)
+    @Name(MysqlUtil.AUTO_RECONNECT)
     @Description("Should the driver try to re-establish stale and/or dead connections")
     @Nullable
     public Boolean autoReconnect;
 
-    @Name(MysqlConstants.USE_COMPRESSION)
+    @Name(MysqlUtil.USE_COMPRESSION)
     @Description("Select this option for WAN connections")
     @Nullable
     public Boolean useCompression;
 
-    @Name(MysqlConstants.SQL_MODE)
+    @Name(MysqlUtil.SQL_MODE)
     @Description("Override the default SQL_MODE session variable used by the server")
     @Nullable
-    public Boolean sqlMode;
+    public String sqlMode;
 
-    @Name(MysqlConstants.USE_SSL)
+    @Name(MysqlUtil.USE_SSL)
     @Description("Turns on SSL encryption. Connection will fail if SSL is not available")
     @Nullable
     public String useSSL;
 
-    @Name(MysqlConstants.USE_ANSI_QUOTES)
+    @Name(MysqlUtil.USE_ANSI_QUOTES)
     @Description("Treats \" as an identifier quote character and not as a string quote character")
     @Nullable
     public Boolean useAnsiQuotes;
 
-    @Name(MysqlConstants.CLIENT_CERT_KEYSTORE_URL)
+    @Name(MysqlUtil.CLIENT_CERT_KEYSTORE_URL)
     @Description("URL to the client certificate KeyStore (if not specified, use defaults)")
     @Nullable
     public String clientCertificateKeyStoreUrl;
 
-    @Name(MysqlConstants.CLIENT_CERT_KEYSTORE_PASSWORD)
+    @Name(MysqlUtil.CLIENT_CERT_KEYSTORE_PASSWORD)
     @Description("Password for the client certificates KeyStore")
     @Nullable
     public String clientCertificateKeyStorePassword;
 
-    @Name(MysqlConstants.TRUST_CERT_KEYSTORE_URL)
+    @Name(MysqlUtil.TRUST_CERT_KEYSTORE_URL)
     @Description("URL to the trusted root certificate KeyStore (if not specified, use defaults)")
     @Nullable
     public String trustCertificateKeyStoreUrl;
 
-    @Name(MysqlConstants.TRUST_CERT_KEYSTORE_PASSWORD)
+    @Name(MysqlUtil.TRUST_CERT_KEYSTORE_PASSWORD)
     @Description("Password for the trusted root certificates KeyStore")
     @Nullable
     public String trustCertificateKeyStorePassword;
 
     @Override
     public String getConnectionString() {
-      return String.format(MysqlConstants.MYSQL_CONNECTION_STRING_FORMAT, host, port, database);
+      return MysqlUtil.getConnectionString(host, port, database);
     }
 
     @Override
     public Map<String, String> getDBSpecificArguments() {
-      ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
-
-      if (autoReconnect != null) {
-        builder.put(MysqlConstants.AUTO_RECONNECT, String.valueOf(autoReconnect));
-      }
-      if (useCompression != null) {
-        builder.put(MysqlConstants.USE_COMPRESSION, String.valueOf(useCompression));
-      }
-      if (sqlMode != null) {
-        builder.put(MysqlConstants.SESSION_VARIABLES, String.format("%s='%s'", MysqlConstants.SQL_MODE, sqlMode));
-      }
-      if (MysqlConstants.REQUIRE_SSL_OPTION.equals(useSSL)) {
-        builder.put(MysqlConstants.USE_SSL, "true");
-      } else if (MysqlConstants.NO_SSL_OPTION.equals(useSSL)) {
-        builder.put(MysqlConstants.USE_SSL, "false");
-      }
-      if (clientCertificateKeyStoreUrl != null) {
-        builder.put(MysqlConstants.CLIENT_CERT_KEYSTORE_URL, String.valueOf(clientCertificateKeyStoreUrl));
-      }
-      if (clientCertificateKeyStorePassword != null) {
-        builder.put(MysqlConstants.CLIENT_CERT_KEYSTORE_PASSWORD, String.valueOf(clientCertificateKeyStorePassword));
-      }
-      if (trustCertificateKeyStoreUrl != null) {
-        builder.put(MysqlConstants.TRUST_CERT_KEYSTORE_URL, String.valueOf(trustCertificateKeyStoreUrl));
-      }
-      if (trustCertificateKeyStorePassword != null) {
-        builder.put(MysqlConstants.TRUST_CERT_KEYSTORE_PASSWORD, String.valueOf(trustCertificateKeyStorePassword));
-      }
-      return builder.build();
+      return MysqlUtil.composeImmutableDbSpecificArgumentsMap(autoReconnect, useCompression, sqlMode, useSSL,
+                                                              clientCertificateKeyStoreUrl,
+                                                              clientCertificateKeyStorePassword,
+                                                              trustCertificateKeyStoreUrl,
+                                                              trustCertificateKeyStorePassword);
     }
 
     @Override
     public String getInitQueriesString() {
       if (useAnsiQuotes != null && useAnsiQuotes) {
-        return MysqlConstants.ANSI_QUOTES_QUERY;
+        return MysqlUtil.ANSI_QUOTES_QUERY;
       }
       return "";
     }

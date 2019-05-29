@@ -61,16 +61,16 @@ public class MysqlSourceTestRun extends MysqlPluginTestBase {
 
     ImmutableMap<String, String> sourceProps = ImmutableMap.<String, String>builder()
       .putAll(BASE_PROPS)
-      .put(MysqlConstants.AUTO_RECONNECT, "true")
-      .put(MysqlConstants.USE_COMPRESSION, "true")
-      .put(MysqlConstants.SQL_MODE, "ANSI_QUOTES,NO_ENGINE_SUBSTITUTION")
+      .put(MysqlUtil.AUTO_RECONNECT, "true")
+      .put(MysqlUtil.USE_COMPRESSION, "true")
+      .put(MysqlUtil.SQL_MODE, "ANSI_QUOTES,NO_ENGINE_SUBSTITUTION")
       .put(AbstractDBSource.DBSourceConfig.IMPORT_QUERY, importQuery)
       .put(AbstractDBSource.DBSourceConfig.BOUNDING_QUERY, boundingQuery)
       .put(AbstractDBSource.DBSourceConfig.SPLIT_BY, splitBy)
       .put(Constants.Reference.REFERENCE_NAME, "DBTestSource").build();
 
     ETLPlugin sourceConfig = new ETLPlugin(
-      MysqlConstants.PLUGIN_NAME,
+      MysqlUtil.PLUGIN_NAME,
       BatchSource.PLUGIN_TYPE,
       sourceProps
     );
@@ -95,13 +95,13 @@ public class MysqlSourceTestRun extends MysqlPluginTestBase {
     String boundingQuery = "SELECT MIN(ID),MAX(ID) from my_table";
     String splitBy = "ID";
     ETLPlugin sourceConfig = new ETLPlugin(
-      MysqlConstants.PLUGIN_NAME,
+      MysqlUtil.PLUGIN_NAME,
       BatchSource.PLUGIN_TYPE,
       ImmutableMap.<String, String>builder()
         .putAll(BASE_PROPS)
-        .put(MysqlConstants.AUTO_RECONNECT, "true")
-        .put(MysqlConstants.USE_COMPRESSION, "true")
-        .put(MysqlConstants.SQL_MODE, "ANSI_QUOTES,NO_ENGINE_SUBSTITUTION")
+        .put(MysqlUtil.AUTO_RECONNECT, "true")
+        .put(MysqlUtil.USE_COMPRESSION, "true")
+        .put(MysqlUtil.SQL_MODE, "ANSI_QUOTES,NO_ENGINE_SUBSTITUTION")
         .put(AbstractDBSource.DBSourceConfig.IMPORT_QUERY, importQuery)
         .put(AbstractDBSource.DBSourceConfig.BOUNDING_QUERY, boundingQuery)
         .put(AbstractDBSource.DBSourceConfig.SPLIT_BY, splitBy)
@@ -193,13 +193,13 @@ public class MysqlSourceTestRun extends MysqlPluginTestBase {
       "GREATEST(MAX(my_table.ID), MAX(your_table.ID))";
     String splitBy = "my_table.ID";
     ETLPlugin sourceConfig = new ETLPlugin(
-      MysqlConstants.PLUGIN_NAME,
+      MysqlUtil.PLUGIN_NAME,
       BatchSource.PLUGIN_TYPE,
       ImmutableMap.<String, String>builder()
         .putAll(BASE_PROPS)
-        .put(MysqlConstants.AUTO_RECONNECT, "true")
-        .put(MysqlConstants.USE_COMPRESSION, "true")
-        .put(MysqlConstants.SQL_MODE, "ANSI_QUOTES,NO_ENGINE_SUBSTITUTION")
+        .put(MysqlUtil.AUTO_RECONNECT, "true")
+        .put(MysqlUtil.USE_COMPRESSION, "true")
+        .put(MysqlUtil.SQL_MODE, "ANSI_QUOTES,NO_ENGINE_SUBSTITUTION")
         .put(AbstractDBSource.DBSourceConfig.IMPORT_QUERY, importQuery)
         .put(AbstractDBSource.DBSourceConfig.BOUNDING_QUERY, boundingQuery)
         .put(AbstractDBSource.DBSourceConfig.SPLIT_BY, splitBy)
@@ -238,9 +238,9 @@ public class MysqlSourceTestRun extends MysqlPluginTestBase {
     ETLPlugin sinkConfig = MockSink.getPlugin("outputTable");
 
     Map<String, String> baseSourceProps = ImmutableMap.<String, String>builder()
-      .put(MysqlConstants.AUTO_RECONNECT, "true")
-      .put(MysqlConstants.USE_COMPRESSION, "true")
-      .put(MysqlConstants.SQL_MODE, "ANSI_QUOTES,NO_ENGINE_SUBSTITUTION")
+      .put(MysqlUtil.AUTO_RECONNECT, "true")
+      .put(MysqlUtil.USE_COMPRESSION, "true")
+      .put(MysqlUtil.SQL_MODE, "ANSI_QUOTES,NO_ENGINE_SUBSTITUTION")
       .put(ConnectionConfig.HOST, BASE_PROPS.get(ConnectionConfig.HOST))
       .put(ConnectionConfig.PORT, BASE_PROPS.get(ConnectionConfig.PORT))
       .put(ConnectionConfig.DATABASE, BASE_PROPS.get(ConnectionConfig.DATABASE))
@@ -255,7 +255,7 @@ public class MysqlSourceTestRun extends MysqlPluginTestBase {
 
     // null user name, null password. Should succeed.
     // as source
-    ETLPlugin dbConfig = new ETLPlugin(MysqlConstants.PLUGIN_NAME, BatchSource.PLUGIN_TYPE, baseSourceProps, null);
+    ETLPlugin dbConfig = new ETLPlugin(MysqlUtil.PLUGIN_NAME, BatchSource.PLUGIN_TYPE, baseSourceProps, null);
     ETLStage table = new ETLStage("uniqueTableSink", sinkConfig);
     ETLStage database = new ETLStage("databaseSource", dbConfig);
     ETLBatchConfig etlConfig = ETLBatchConfig.builder()
@@ -271,7 +271,7 @@ public class MysqlSourceTestRun extends MysqlPluginTestBase {
     Map<String, String> noUser = new HashMap<>(baseSourceProps);
     noUser.put(ConnectionConfig.PASSWORD, "password");
     database = new ETLStage("databaseSource",
-                            new ETLPlugin(MysqlConstants.PLUGIN_NAME, BatchSource.PLUGIN_TYPE, noUser, null));
+                            new ETLPlugin(MysqlUtil.PLUGIN_NAME, BatchSource.PLUGIN_TYPE, noUser, null));
     etlConfig = ETLBatchConfig.builder()
       .addStage(database)
       .addStage(table)
@@ -286,7 +286,7 @@ public class MysqlSourceTestRun extends MysqlPluginTestBase {
     emptyPassword.put(ConnectionConfig.USER, "root");
     emptyPassword.put(ConnectionConfig.PASSWORD, "");
     database = new ETLStage("databaseSource",
-                            new ETLPlugin(MysqlConstants.PLUGIN_NAME, BatchSource.PLUGIN_TYPE, emptyPassword, null));
+                            new ETLPlugin(MysqlUtil.PLUGIN_NAME, BatchSource.PLUGIN_TYPE, emptyPassword, null));
     etlConfig = ETLBatchConfig.builder()
       .addStage(database)
       .addStage(table)
@@ -304,13 +304,13 @@ public class MysqlSourceTestRun extends MysqlPluginTestBase {
     String splitBy = "ID";
     ETLPlugin sinkConfig = MockSink.getPlugin("table");
     ETLPlugin sourceBadNameConfig = new ETLPlugin(
-      MysqlConstants.PLUGIN_NAME,
+      MysqlUtil.PLUGIN_NAME,
       BatchSource.PLUGIN_TYPE,
       ImmutableMap.<String, String>builder()
         .putAll(BASE_PROPS)
-        .put(MysqlConstants.AUTO_RECONNECT, "true")
-        .put(MysqlConstants.USE_COMPRESSION, "true")
-        .put(MysqlConstants.SQL_MODE, "ANSI_QUOTES,NO_ENGINE_SUBSTITUTION")
+        .put(MysqlUtil.AUTO_RECONNECT, "true")
+        .put(MysqlUtil.USE_COMPRESSION, "true")
+        .put(MysqlUtil.SQL_MODE, "ANSI_QUOTES,NO_ENGINE_SUBSTITUTION")
         .put(AbstractDBSource.DBSourceConfig.IMPORT_QUERY, importQuery)
         .put(AbstractDBSource.DBSourceConfig.BOUNDING_QUERY, boundingQuery)
         .put(AbstractDBSource.DBSourceConfig.SPLIT_BY, splitBy)
@@ -332,12 +332,12 @@ public class MysqlSourceTestRun extends MysqlPluginTestBase {
 
     // Bad connection
     ETLPlugin sourceBadConnConfig = new ETLPlugin(
-      MysqlConstants.PLUGIN_NAME,
+      MysqlUtil.PLUGIN_NAME,
       BatchSource.PLUGIN_TYPE,
       ImmutableMap.<String, String>builder()
-        .put(MysqlConstants.AUTO_RECONNECT, "true")
-        .put(MysqlConstants.USE_COMPRESSION, "true")
-        .put(MysqlConstants.SQL_MODE, "ANSI_QUOTES,NO_ENGINE_SUBSTITUTION")
+        .put(MysqlUtil.AUTO_RECONNECT, "true")
+        .put(MysqlUtil.USE_COMPRESSION, "true")
+        .put(MysqlUtil.SQL_MODE, "ANSI_QUOTES,NO_ENGINE_SUBSTITUTION")
         .put(ConnectionConfig.JDBC_PLUGIN_NAME, JDBC_DRIVER_NAME)
         .put(ConnectionConfig.HOST, BASE_PROPS.get(ConnectionConfig.HOST))
         .put(ConnectionConfig.PORT, BASE_PROPS.get(ConnectionConfig.PORT))

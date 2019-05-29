@@ -56,13 +56,13 @@ public class MysqlSinkTestRun extends MysqlPluginTestBase {
 
     ETLPlugin sourceConfig = MockSource.getPlugin(inputDatasetName);
     ETLPlugin sinkConfig = new ETLPlugin(
-      MysqlConstants.PLUGIN_NAME,
+      MysqlUtil.PLUGIN_NAME,
       BatchSink.PLUGIN_TYPE,
       ImmutableMap.<String, String>builder()
         .putAll(BASE_PROPS)
-        .put(MysqlConstants.AUTO_RECONNECT, "true")
-        .put(MysqlConstants.USE_COMPRESSION, "true")
-        .put(MysqlConstants.SQL_MODE, "ANSI_QUOTES,NO_ENGINE_SUBSTITUTION")
+        .put(MysqlUtil.AUTO_RECONNECT, "true")
+        .put(MysqlUtil.USE_COMPRESSION, "true")
+        .put(MysqlUtil.SQL_MODE, "ANSI_QUOTES,NO_ENGINE_SUBSTITUTION")
         .put(AbstractDBSink.DBSinkConfig.TABLE_NAME, "MY_DEST_TABLE")
         .put(Constants.Reference.REFERENCE_NAME, "DBTest")
         .build(),
