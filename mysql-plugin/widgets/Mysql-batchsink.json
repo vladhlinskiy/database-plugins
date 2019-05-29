@@ -104,22 +104,19 @@
       "label": "Advanced",
       "properties": [
         {
-          "widget-type": "radio-group",
+          "widget-type": "toggle",
           "label": "Use compression protocol",
           "name": "useCompression",
           "widget-attributes": {
-            "layout": "inline",
-            "default": "false",
-            "options": [
-              {
-                "id": "true",
-                "label": "True"
-              },
-              {
-                "id": "false",
-                "label": "False"
-              }
-            ]
+            "on": {
+              "value": "true",
+              "label": "On"
+            },
+            "off": {
+              "value": "false",
+              "label": "Off"
+            },
+            "default": "false"
           }
         },
         {
@@ -140,22 +137,19 @@
           }
         },
         {
-          "widget-type": "radio-group",
+          "widget-type": "toggle",
           "label": "Auto reconnect",
           "name": "autoReconnect",
           "widget-attributes": {
-            "layout": "inline",
-            "default": "false",
-            "options": [
-              {
-                "id": "true",
-                "label": "True"
-              },
-              {
-                "id": "false",
-                "label": "False"
-              }
-            ]
+            "on": {
+              "value": "true",
+              "label": "On"
+            },
+            "off": {
+              "value": "false",
+              "label": "Off"
+            },
+            "default": "false"
           }
         }
       ]
