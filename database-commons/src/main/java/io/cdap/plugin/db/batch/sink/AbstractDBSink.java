@@ -161,11 +161,14 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
     try {
       DBUtils.ensureJDBCDriverIsAvailable(driverClass, dbSinkConfig.getConnectionString(), dbSinkConfig.jdbcPluginName);
       try (Connection connection = DriverManager.getConnection(dbSinkConfig.getConnectionString(),
-                                                               dbSinkConfig.getConnectionArguments());
-           Statement statement = connection.createStatement();
-           ResultSet rs = statement.executeQuery("SELECT * FROM " + dbSinkConfig.getEscapedTableName()
-                                                   + " WHERE 1 = 0")) {
-        inferredFields.addAll(getSchemaReader().getSchemaFields(rs));
+                                                               dbSinkConfig.getConnectionArguments())) {
+        executeInitQueries(connection, dbSinkConfig.getInitQueriesString());
+
+        try (Statement statement = connection.createStatement();
+             ResultSet rs = statement.executeQuery("SELECT * FROM " + dbSinkConfig.getEscapedTableName()
+                                                     + " WHERE 1 = 0")) {
+          inferredFields.addAll(getSchemaReader().getSchemaFields(rs));
+        }
       } catch (SQLException e) {
         throw new InvalidStageException("Error while reading table metadata", e);
 
@@ -222,6 +225,7 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
 
     try (Connection connection = DriverManager.getConnection(connectionString,
                                                              dbSinkConfig.getConnectionArguments())) {
+      executeInitQueries(connection, dbSinkConfig.getInitQueriesString());
       try (Statement statement = connection.createStatement();
            // Run a query against the DB table that returns 0 records, but returns valid ResultSetMetadata
            // that can be used to construct DBRecord objects to sink to the database table.
@@ -258,15 +262,16 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
       throw Throwables.propagate(e);
     }
 
-    try (Connection connection = DriverManager.getConnection(connectionString, dbSinkConfig.getConnectionArguments());
-         ResultSet tables = connection.getMetaData().getTables(null, null, tableName, null)) {
-
-      Preconditions.checkArgument(tables.next(),
-                                  "Table %s does not exist. " +
-                                    "Please check that the 'tableName' property " +
-                                    "has been set correctly, and that the connection string %s " +
-                                    "points to a valid database.",
-                                  tableName, connectionString);
+    try (Connection connection = DriverManager.getConnection(connectionString, dbSinkConfig.getConnectionArguments())) {
+      executeInitQueries(connection, dbSinkConfig.getInitQueriesString());
+      try (ResultSet tables = connection.getMetaData().getTables(null, null, tableName, null)) {
+        Preconditions.checkArgument(tables.next(),
+                                    "Table %s does not exist. " +
+                                      "Please check that the 'tableName' property " +
+                                      "has been set correctly, and that the connection string %s " +
+                                      "points to a valid database.",
+                                    tableName, connectionString);
+      }
 
       try (PreparedStatement pStmt = connection.prepareStatement("SELECT * FROM " + dbSinkConfig.getEscapedTableName()
                                                                    + " WHERE 1 = 0");
@@ -327,6 +332,20 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
     }
   }
 
+  private void executeInitQueries(Connection connection, String initQueriesString) {
+    executeInitQueries(connection, ConnectionConfig.getInitQueriesList(initQueriesString));
+  }
+
+  private void executeInitQueries(Connection connection, List<String> initQueries) {
+    for (String query : initQueries) {
+      try (Statement statement = connection.createStatement()) {
+        statement.execute(query);
+      } catch (SQLException e) {
+        LOG.warn("Exception while executing initialization query '" + query + "'", e);
+      }
+    }
+  }
+
   /**
    * {@link PluginConfig} for {@link AbstractDBSink}
    */
@@ -362,6 +381,7 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
                  dbSinkConfig.getTransactionIsolationLevel());
       }
       conf.put(DBUtils.CONNECTION_ARGUMENTS, dbSinkConfig.getConnectionArgumentsString());
+      conf.put(DBUtils.INIT_QUERIES, dbSinkConfig.getInitQueriesString());
       conf.put(DBConfiguration.DRIVER_CLASS_PROPERTY, driverClass.getName());
       conf.put(DBConfiguration.URL_PROPERTY, connectionString);
       if (dbSinkConfig.user != null) {

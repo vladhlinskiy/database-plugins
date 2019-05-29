@@ -67,6 +67,11 @@ public class MysqlAction extends AbstractDBAction {
     @Nullable
     public String useSSL;
 
+    @Name(MysqlConstants.USE_ANSI_QUOTES)
+    @Description("Treats \" as an identifier quote character and not as a string quote character")
+    @Nullable
+    public Boolean useAnsiQuotes;
+
     @Name(MysqlConstants.CLIENT_CERT_KEYSTORE_URL)
     @Description("URL to the client certificate KeyStore (if not specified, use defaults)")
     @Nullable
@@ -123,6 +128,14 @@ public class MysqlAction extends AbstractDBAction {
         builder.put(MysqlConstants.TRUST_CERT_KEYSTORE_PASSWORD, String.valueOf(trustCertificateKeyStorePassword));
       }
       return builder.build();
+    }
+
+    @Override
+    public String getInitQueriesString() {
+      if (useAnsiQuotes != null && useAnsiQuotes) {
+        return MysqlConstants.ANSI_QUOTES_QUERY;
+      }
+      return "";
     }
   }
 }

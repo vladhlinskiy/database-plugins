@@ -16,6 +16,7 @@
 
 package io.cdap.plugin.db.batch.action;
 
+import io.cdap.plugin.db.ConnectionConfig;
 import io.cdap.plugin.util.DBUtils;
 import io.cdap.plugin.util.DriverCleanup;
 
@@ -24,6 +25,7 @@ import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.List;
 
 /**
  * Class used by database action plugins to run database commands
@@ -54,6 +56,7 @@ public class DBRun {
       try (Connection connection = DriverManager.getConnection(
         config.getConnectionString(),
         config.getConnectionArguments())) {
+        executeInitQueries(connection, config.getInitQueriesString());
         if (!enableAutoCommit) {
           connection.setAutoCommit(false);
         }
@@ -67,6 +70,18 @@ public class DBRun {
     } finally {
       if (driverCleanup != null) {
         driverCleanup.destroy();
+      }
+    }
+  }
+
+  private void executeInitQueries(Connection connection, String initQueriesString) throws SQLException {
+    executeInitQueries(connection, ConnectionConfig.getInitQueriesList(initQueriesString));
+  }
+
+  private void executeInitQueries(Connection connection, List<String> initQueries) throws SQLException {
+    for (String query : initQueries) {
+      try (Statement statement = connection.createStatement()) {
+        statement.execute(query);
       }
     }
   }

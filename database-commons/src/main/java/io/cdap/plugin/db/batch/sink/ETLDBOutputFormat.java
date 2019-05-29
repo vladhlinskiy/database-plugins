@@ -39,6 +39,7 @@ import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Properties;
 
 /**
@@ -160,6 +161,14 @@ public class ETLDBOutputFormat<K extends DBWritable, V> extends DBOutputFormat<K
       String level = conf.get(TransactionIsolationLevel.CONF_KEY);
       LOG.debug("Transaction isolation level: {}", level);
       connection.setTransactionIsolation(TransactionIsolationLevel.getLevel(level));
+      // execute initialization queries if any
+      for (String query : ConnectionConfig.getInitQueriesList(conf.get(DBUtils.INIT_QUERIES))) {
+        try (Statement statement = connection.createStatement()) {
+          statement.execute(query);
+        } catch (SQLException e) {
+          LOG.warn("Exception while executing initialization query '" + query + "'", e);
+        }
+      }
     } catch (Exception e) {
       throw Throwables.propagate(e);
     }

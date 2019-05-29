@@ -26,9 +26,11 @@ import io.cdap.plugin.common.KeyValueListParser;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
 /**
@@ -104,6 +106,22 @@ public abstract class ConnectionConfig extends PluginConfig {
   }
 
   /**
+   *
+   * Parses single initialization queries string where each query separated by ';' character into a list of
+   * initialization queries.
+   *
+   * @param initQueriesString single initialization queries string.
+   * @return list of initialization queries.
+   */
+  public static List<String> getInitQueriesList(@Nullable String initQueriesString) {
+    if (Strings.isNullOrEmpty(initQueriesString)) {
+      return Collections.emptyList();
+    }
+
+    return Stream.of(initQueriesString.split("(?<=;)")).map(String::trim).collect(Collectors.toList());
+  }
+
+  /**
    * @return a {@link Properties} of connection arguments, parsed from the config.
    */
   public Properties getConnectionArguments() {
@@ -114,7 +132,7 @@ public abstract class ConnectionConfig extends PluginConfig {
 
   /**
    * Returns all configuration properties including database-specific ones as single string.
-   * In the case when there are no connection arguments, empty string will be returned.
+   * In the case when there are no connection arguments, an empty string will be returned.
    * @return connection arguments as string with '=' as key-value delimiter and ';' as pair delimiter.
    */
   public String getConnectionArgumentsString() {
@@ -132,6 +150,16 @@ public abstract class ConnectionConfig extends PluginConfig {
   public abstract String getConnectionString();
 
   /**
+   * Returns list of initialization queries as a single string separated by ';' character. Initialization queries
+   * supposed to be executed preserving order right after connection establishing.
+   * In the case when there are no initialization queries, an empty string will be returned.
+   * @return list of initialization queries as a single string separated by ';' character.
+   */
+  public String getInitQueriesString() {
+    return "";
+  }
+
+  /**
    * Provides support for database-specific configuration properties.
    * @return {@link Map} of additional connection arguments.
    */
@@ -141,7 +169,7 @@ public abstract class ConnectionConfig extends PluginConfig {
 
   /**
    * Returns database-specific configuration properties as single string.
-   * In the case when there are no database-specific arguments, empty string will be returned.
+   * In the case when there are no database-specific arguments, an empty string will be returned.
    * @return additional connection arguments as string with '=' as key-value delimiter and ';' as pair delimiter.
    */
   protected String getDBSpecificArgumentsString() {

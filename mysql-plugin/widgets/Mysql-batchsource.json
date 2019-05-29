@@ -164,6 +164,25 @@
           }
         },
         {
+          "widget-type": "radio-group",
+          "label": "Use ANSI quotes to quote identifiers",
+          "name": "useAnsiQuotes",
+          "widget-attributes": {
+            "layout": "inline",
+            "default": "false",
+            "options": [
+              {
+                "id": "true",
+                "label": "True"
+              },
+              {
+                "id": "false",
+                "label": "False"
+              }
+            ]
+          }
+        },
+        {
           "widget-type": "textbox",
           "label": "SQL_MODE",
           "name": "sql_mode"

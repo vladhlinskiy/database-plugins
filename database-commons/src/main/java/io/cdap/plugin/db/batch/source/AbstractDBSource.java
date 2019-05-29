@@ -59,6 +59,7 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.List;
 import java.util.Properties;
 import javax.annotation.Nullable;
 
@@ -121,6 +122,7 @@ public abstract class AbstractDBSource extends ReferenceBatchSource<LongWritable
 
       driverCleanup = loadPluginClassAndGetDriver(driverClass);
       try (Connection connection = getConnection()) {
+        executeInitQueries(connection, sourceConfig.getInitQueriesString());
         String query = sourceConfig.query;
         return loadSchemaFromDB(connection, query);
       } finally {
@@ -150,9 +152,24 @@ public abstract class AbstractDBSource extends ReferenceBatchSource<LongWritable
 
     Properties properties = sourceConfig.getConnectionArguments();
     try (Connection connection = DriverManager.getConnection(connectionString, properties)) {
+      executeInitQueries(connection, sourceConfig.getInitQueriesString());
       return loadSchemaFromDB(connection, sourceConfig.importQuery);
     } finally {
       driverCleanup.destroy();
+    }
+  }
+
+  private void executeInitQueries(Connection connection, String initQueriesString) {
+    executeInitQueries(connection, ConnectionConfig.getInitQueriesList(initQueriesString));
+  }
+
+  private void executeInitQueries(Connection connection, List<String> initQueries) {
+    for (String query : initQueries) {
+      try (Statement statement = connection.createStatement()) {
+        statement.execute(query);
+      } catch (SQLException e) {
+        LOG.warn("Exception while executing initialization query '" + query + "'", e);
+      }
     }
   }
 
@@ -222,6 +239,7 @@ public abstract class AbstractDBSource extends ReferenceBatchSource<LongWritable
                 sourceConfig.getTransactionIsolationLevel());
     }
     hConf.set(DBUtils.CONNECTION_ARGUMENTS, sourceConfig.getConnectionArgumentsString());
+    hConf.set(DBUtils.INIT_QUERIES, sourceConfig.getInitQueriesString());
     if (sourceConfig.numSplits == null || sourceConfig.numSplits != 1) {
       if (!sourceConfig.getImportQuery().contains("$CONDITIONS")) {
         throw new IllegalArgumentException(String.format("Import Query %s must contain the string '$CONDITIONS'.",

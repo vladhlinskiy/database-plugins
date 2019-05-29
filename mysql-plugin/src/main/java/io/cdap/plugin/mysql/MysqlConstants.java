@@ -30,6 +30,7 @@ public final class MysqlConstants {
   public static final String SESSION_VARIABLES = "sessionVariables";
   public static final String ALLOW_MULTIPLE_QUERIES = "allowMultiQueries";
   public static final String USE_SSL = "useSSL";
+  public static final String USE_ANSI_QUOTES = "useAnsiQuotes";
   public static final String NO_SSL_OPTION = "No";
   public static final String REQUIRE_SSL_OPTION = "Require";
   public static final String CLIENT_CERT_KEYSTORE_URL = "clientCertificateKeyStoreUrl";
@@ -43,5 +44,10 @@ public final class MysqlConstants {
    * URL parameter.
    */
   public static final String SQL_MODE = "sql_mode";
+
+  /**
+   * Query to append 'ANSI_QUOTES' sql mode to the current value of SQL_MODE system variable.
+   */
+  public static final String ANSI_QUOTES_QUERY = "SET SESSION sql_mode = (CONCAT(@@sql_mode , ',', 'ANSI_QUOTES'));";
 
 }
