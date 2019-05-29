@@ -159,16 +159,14 @@ public abstract class AbstractDBSource extends ReferenceBatchSource<LongWritable
     }
   }
 
-  private void executeInitQueries(Connection connection, String initQueriesString) {
+  private void executeInitQueries(Connection connection, String initQueriesString) throws SQLException {
     executeInitQueries(connection, ConnectionConfig.getInitQueriesList(initQueriesString));
   }
 
-  private void executeInitQueries(Connection connection, List<String> initQueries) {
+  private void executeInitQueries(Connection connection, List<String> initQueries) throws SQLException {
     for (String query : initQueries) {
       try (Statement statement = connection.createStatement()) {
         statement.execute(query);
-      } catch (SQLException e) {
-        LOG.warn("Exception while executing initialization query '" + query + "'", e);
       }
     }
   }

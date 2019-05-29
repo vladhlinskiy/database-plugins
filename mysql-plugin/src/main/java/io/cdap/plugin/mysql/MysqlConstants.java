@@ -49,5 +49,4 @@ public final class MysqlConstants {
    * Query to append 'ANSI_QUOTES' sql mode to the current value of SQL_MODE system variable.
    */
   public static final String ANSI_QUOTES_QUERY = "SET SESSION sql_mode = (CONCAT(@@sql_mode , ',', 'ANSI_QUOTES'));";
-
 }

@@ -265,12 +265,12 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
     try (Connection connection = DriverManager.getConnection(connectionString, dbSinkConfig.getConnectionArguments())) {
       executeInitQueries(connection, dbSinkConfig.getInitQueriesString());
       try (ResultSet tables = connection.getMetaData().getTables(null, null, tableName, null)) {
-        Preconditions.checkArgument(tables.next(),
-                                    "Table %s does not exist. " +
-                                      "Please check that the 'tableName' property " +
-                                      "has been set correctly, and that the connection string %s " +
-                                      "points to a valid database.",
-                                    tableName, connectionString);
+        if (!tables.next()) {
+          throw new InvalidStageException("Table " + tableName + " does not exist. " +
+                                            "Please check that the 'tableName' property has been set correctly, " +
+                                            "and that the connection string  " + connectionString +
+                                            "points to a valid database.");
+        }
       }
 
       try (PreparedStatement pStmt = connection.prepareStatement("SELECT * FROM " + dbSinkConfig.getEscapedTableName()
@@ -332,16 +332,14 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
     }
   }
 
-  private void executeInitQueries(Connection connection, String initQueriesString) {
+  private void executeInitQueries(Connection connection, String initQueriesString) throws SQLException {
     executeInitQueries(connection, ConnectionConfig.getInitQueriesList(initQueriesString));
   }
 
-  private void executeInitQueries(Connection connection, List<String> initQueries) {
+  private void executeInitQueries(Connection connection, List<String> initQueries) throws SQLException {
     for (String query : initQueries) {
       try (Statement statement = connection.createStatement()) {
         statement.execute(query);
-      } catch (SQLException e) {
-        LOG.warn("Exception while executing initialization query '" + query + "'", e);
       }
     }
   }

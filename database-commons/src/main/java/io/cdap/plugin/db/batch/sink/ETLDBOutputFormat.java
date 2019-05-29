@@ -165,8 +165,6 @@ public class ETLDBOutputFormat<K extends DBWritable, V> extends DBOutputFormat<K
       for (String query : ConnectionConfig.getInitQueriesList(conf.get(DBUtils.INIT_QUERIES))) {
         try (Statement statement = connection.createStatement()) {
           statement.execute(query);
-        } catch (SQLException e) {
-          LOG.warn("Exception while executing initialization query '" + query + "'", e);
         }
       }
     } catch (Exception e) {
