@@ -108,7 +108,7 @@ public abstract class ConnectionConfig extends PluginConfig {
   /**
    *
    * Parses single initialization queries string where each query separated by ';' character into a list of
-   * initialization queries.
+   * initialization queries. Each resulting query ends with ';' character.
    *
    * @param initQueriesString single initialization queries string.
    * @return list of initialization queries.
@@ -118,7 +118,9 @@ public abstract class ConnectionConfig extends PluginConfig {
       return Collections.emptyList();
     }
 
-    return Stream.of(initQueriesString.split("(?<=;)")).map(String::trim).collect(Collectors.toList());
+    return Stream.of(initQueriesString.split("(?<=;)"))
+      .map(String::trim)
+      .collect(Collectors.toList());
   }
 
   /**
@@ -136,11 +138,15 @@ public abstract class ConnectionConfig extends PluginConfig {
    * @return connection arguments as string with '=' as key-value delimiter and ';' as pair delimiter.
    */
   public String getConnectionArgumentsString() {
-    return (this.connectionArguments != null)
-      ? (!getDBSpecificArgumentsString().isEmpty())
-        ? this.connectionArguments + ";" + this.getDBSpecificArgumentsString()
-        : this.connectionArguments
-      : this.getDBSpecificArgumentsString();
+    if (this.connectionArguments == null) {
+      return getDBSpecificArgumentsString();
+    }
+
+    if (getDBSpecificArguments().isEmpty()) {
+      return this.connectionArguments;
+    }
+
+    return this.connectionArguments + ";" + getDBSpecificArgumentsString();
   }
 
   /**

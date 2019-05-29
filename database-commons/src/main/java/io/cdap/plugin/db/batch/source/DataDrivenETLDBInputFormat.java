@@ -112,7 +112,8 @@ public class DataDrivenETLDBInputFormat extends DataDrivenDBInputFormat {
           try (Statement statement = connection.createStatement()) {
             statement.execute(query);
           } catch (SQLException e) {
-            LOG.warn("Exception while executing initialization query '" + query + "'", e);
+            LOG.error("Exception while executing initialization query '" + query + "'", e);
+            throw e;
           }
         }
       } catch (Exception e) {

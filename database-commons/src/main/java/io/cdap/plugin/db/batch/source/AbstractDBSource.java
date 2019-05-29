@@ -17,6 +17,7 @@
 package io.cdap.plugin.db.batch.source;
 
 import com.google.common.base.Strings;
+import com.google.common.base.Throwables;
 import io.cdap.cdap.api.annotation.Description;
 import io.cdap.cdap.api.annotation.Macro;
 import io.cdap.cdap.api.annotation.Name;
@@ -168,7 +169,8 @@ public abstract class AbstractDBSource extends ReferenceBatchSource<LongWritable
       try (Statement statement = connection.createStatement()) {
         statement.execute(query);
       } catch (SQLException e) {
-        LOG.warn("Exception while executing initialization query '" + query + "'", e);
+        LOG.error("Exception while executing initialization query '" + query + "'", e);
+        throw Throwables.propagate(e);
       }
     }
   }
