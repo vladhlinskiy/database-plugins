@@ -46,6 +46,27 @@ Normally this setting does not matter. It only matters if you are using a jdbc d
 driver -- that will error when the commit operation is run, or a driver that will error when auto-commit is
 set to false. For drivers like those, you will need to set this to 'true'.
 
+**Use SSL** Turns on SSL encryption. The connection will fail if SSL is not available.
+
+**Keystore URL** URL to the client certificate KeyStore (if not specified, use defaults). Must be accessible at the
+same location on host where CDAP Master is running and all hosts on which at least one HDFS, MapReduce, or YARN daemon
+role is running.
+
+**Keystore password** Password for the client certificates KeyStore.
+
+**Truststore URL** URL to the trusted root certificate KeyStore (if not specified, use defaults). Must be accessible at
+the same location on host where CDAP Master is running and all hosts on which at least one HDFS, MapReduce, or YARN
+daemon role is running.
+
+**Keystore password** Password for the trusted root certificates KeyStore
+
+**Use compression protocol** Use zlib compression when communicating with the server. Select this option for WAN
+connections.
+
+**Use ANSI quotes to quote identifiers** Treats " as an identifier quote character and not as a string quote character.
+
+**SQL_MODE** Override the default SQL_MODE session variable used by the server.
+
 
 Example
 -------
