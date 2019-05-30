@@ -44,7 +44,7 @@ public class MysqlSink extends AbstractDBSink {
   /**
    * MySQL action configuration.
    */
-  public static class MysqlSinkConfig extends DBSpecificSinkConfig {
+  public static class MysqlSinkConfig extends DBSpecificSinkConfig implements MysqlConfig {
 
     @Name(MysqlConstants.AUTO_RECONNECT)
     @Description("Should the driver try to re-establish stale and/or dead connections")
@@ -88,16 +88,16 @@ public class MysqlSink extends AbstractDBSink {
 
     @Override
     public String getConnectionString() {
-      return MysqlUtil.getConnectionString(host, port, database);
+      return getConnectionString(host, port, database);
     }
 
     @Override
     public Map<String, String> getDBSpecificArguments() {
-      return MysqlUtil.composeDbSpecificArgumentsMap(autoReconnect, useCompression, sqlMode, useSSL,
-                                                     clientCertificateKeyStoreUrl,
-                                                     clientCertificateKeyStorePassword,
-                                                     trustCertificateKeyStoreUrl,
-                                                     trustCertificateKeyStorePassword);
+      return composeDbSpecificArgumentsMap(autoReconnect, useCompression, sqlMode, useSSL,
+                                                                     clientCertificateKeyStoreUrl,
+                                                                     clientCertificateKeyStorePassword,
+                                                                     trustCertificateKeyStoreUrl,
+                                                                     trustCertificateKeyStorePassword);
     }
   }
 }

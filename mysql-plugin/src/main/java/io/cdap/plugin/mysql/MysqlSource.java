@@ -50,7 +50,7 @@ public class MysqlSource extends AbstractDBSource {
   /**
    * MySQL source config.
    */
-  public static class MysqlSourceConfig extends DBSpecificSourceConfig {
+  public static class MysqlSourceConfig extends DBSpecificSourceConfig implements MysqlConfig {
 
     @Name(MysqlConstants.AUTO_RECONNECT)
     @Description("Should the driver try to re-establish stale and/or dead connections")
@@ -99,16 +99,16 @@ public class MysqlSource extends AbstractDBSource {
 
     @Override
     public String getConnectionString() {
-      return MysqlUtil.getConnectionString(host, port, database);
+      return getConnectionString(host, port, database);
     }
 
     @Override
     public Map<String, String> getDBSpecificArguments() {
-      return MysqlUtil.composeDbSpecificArgumentsMap(autoReconnect, useCompression, sqlMode, useSSL,
-                                                     clientCertificateKeyStoreUrl,
-                                                     clientCertificateKeyStorePassword,
-                                                     trustCertificateKeyStoreUrl,
-                                                     trustCertificateKeyStorePassword);
+      return composeDbSpecificArgumentsMap(autoReconnect, useCompression, sqlMode, useSSL,
+                                                                     clientCertificateKeyStoreUrl,
+                                                                     clientCertificateKeyStorePassword,
+                                                                     trustCertificateKeyStoreUrl,
+                                                                     trustCertificateKeyStorePassword);
     }
 
     @Override

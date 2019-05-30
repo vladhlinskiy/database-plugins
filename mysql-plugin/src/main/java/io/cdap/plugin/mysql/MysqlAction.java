@@ -44,7 +44,7 @@ public class MysqlAction extends AbstractDBAction {
   /**
    * Mysql Action Config.
    */
-  public static class MysqlActionConfig extends DBSpecificQueryConfig {
+  public static class MysqlActionConfig extends DBSpecificQueryConfig implements MysqlConfig {
 
     @Name(MysqlConstants.AUTO_RECONNECT)
     @Description("Should the driver try to re-establish stale and/or dead connections")
@@ -93,16 +93,16 @@ public class MysqlAction extends AbstractDBAction {
 
     @Override
     public String getConnectionString() {
-      return MysqlUtil.getConnectionString(host, port, database);
+      return getConnectionString(host, port, database);
     }
 
     @Override
     public Map<String, String> getDBSpecificArguments() {
-      return MysqlUtil.composeDbSpecificArgumentsMap(autoReconnect, useCompression, sqlMode, useSSL,
-                                                     clientCertificateKeyStoreUrl,
-                                                     clientCertificateKeyStorePassword,
-                                                     trustCertificateKeyStoreUrl,
-                                                     trustCertificateKeyStorePassword);
+      return composeDbSpecificArgumentsMap(autoReconnect, useCompression, sqlMode, useSSL,
+                                                       clientCertificateKeyStoreUrl,
+                                                       clientCertificateKeyStorePassword,
+                                                       trustCertificateKeyStoreUrl,
+                                                       trustCertificateKeyStorePassword);
     }
 
     @Override

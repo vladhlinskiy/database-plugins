@@ -23,10 +23,7 @@ import java.util.Map;
 /**
  * MySQL util methods.
  */
-public final class MysqlUtil {
-  private MysqlUtil() {
-    throw new AssertionError("Should not instantiate static utility class.");
-  }
+public interface MysqlConfig {
 
   /**
    * Composes immutable map of the MySQL specific arguments.
@@ -41,7 +38,7 @@ public final class MysqlUtil {
    * @param trustCertificateKeyStorePassword  password for the trusted root certificates KeyStore.
    * @return immutable map of the MySQL specific arguments
    */
-  public static Map<String, String> composeDbSpecificArgumentsMap(Boolean autoReconnect,
+  default Map<String, String> composeDbSpecificArgumentsMap(Boolean autoReconnect,
                                                                   Boolean useCompression,
                                                                   String sqlMode,
                                                                   String useSSL,
@@ -89,7 +86,7 @@ public final class MysqlUtil {
    * @param database database name.
    * @return MySQL specific JDBC connection string
    */
-  public static String getConnectionString(String host, Integer port, String database) {
+  default String getConnectionString(String host, Integer port, String database) {
     return String.format(MysqlConstants.MYSQL_CONNECTION_STRING_FORMAT, host, port, database);
   }
 }
