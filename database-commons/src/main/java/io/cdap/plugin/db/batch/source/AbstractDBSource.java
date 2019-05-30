@@ -17,7 +17,6 @@
 package io.cdap.plugin.db.batch.source;
 
 import com.google.common.base.Strings;
-import com.google.common.base.Throwables;
 import io.cdap.cdap.api.annotation.Description;
 import io.cdap.cdap.api.annotation.Macro;
 import io.cdap.cdap.api.annotation.Name;
@@ -160,17 +159,14 @@ public abstract class AbstractDBSource extends ReferenceBatchSource<LongWritable
     }
   }
 
-  private void executeInitQueries(Connection connection, String initQueriesString) {
+  private void executeInitQueries(Connection connection, String initQueriesString) throws SQLException {
     executeInitQueries(connection, ConnectionConfig.getInitQueriesList(initQueriesString));
   }
 
-  private void executeInitQueries(Connection connection, List<String> initQueries) {
+  private void executeInitQueries(Connection connection, List<String> initQueries) throws SQLException {
     for (String query : initQueries) {
       try (Statement statement = connection.createStatement()) {
         statement.execute(query);
-      } catch (SQLException e) {
-        LOG.error("Exception while executing initialization query '" + query + "'", e);
-        throw Throwables.propagate(e);
       }
     }
   }

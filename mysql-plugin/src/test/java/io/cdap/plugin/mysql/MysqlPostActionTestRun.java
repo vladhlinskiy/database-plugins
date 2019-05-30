@@ -46,13 +46,13 @@ public class MysqlPostActionTestRun extends MysqlPluginTestBase {
     ETLStage source = new ETLStage("source", MockSource.getPlugin("actionInput"));
     ETLStage sink = new ETLStage("sink", MockSink.getPlugin("actionOutput"));
     ETLStage action = new ETLStage("action", new ETLPlugin(
-      MysqlUtil.PLUGIN_NAME,
+      MysqlConstants.PLUGIN_NAME,
       PostAction.PLUGIN_TYPE,
       ImmutableMap.<String, String>builder()
         .putAll(BASE_PROPS)
-        .put(MysqlUtil.AUTO_RECONNECT, "true")
-        .put(MysqlUtil.USE_COMPRESSION, "true")
-        .put(MysqlUtil.SQL_MODE, "ANSI_QUOTES,NO_ENGINE_SUBSTITUTION")
+        .put(MysqlConstants.AUTO_RECONNECT, "true")
+        .put(MysqlConstants.USE_COMPRESSION, "true")
+        .put(MysqlConstants.SQL_MODE, "ANSI_QUOTES,NO_ENGINE_SUBSTITUTION")
         .put(QueryConfig.QUERY, "delete from postActionTest where day = '${logicalStartTime(yyyy-MM-dd,0m,UTC)}'")
         .put(ConnectionConfig.ENABLE_AUTO_COMMIT, "false")
         .put(QueryActionConfig.RUN_CONDITION, Condition.SUCCESS.name())

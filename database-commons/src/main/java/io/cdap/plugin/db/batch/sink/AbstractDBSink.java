@@ -332,17 +332,14 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
     }
   }
 
-  private void executeInitQueries(Connection connection, String initQueriesString) {
+  private void executeInitQueries(Connection connection, String initQueriesString) throws SQLException {
     executeInitQueries(connection, ConnectionConfig.getInitQueriesList(initQueriesString));
   }
 
-  private void executeInitQueries(Connection connection, List<String> initQueries) {
+  private void executeInitQueries(Connection connection, List<String> initQueries) throws SQLException {
     for (String query : initQueries) {
       try (Statement statement = connection.createStatement()) {
         statement.execute(query);
-      } catch (SQLException e) {
-        LOG.error("Exception while executing initialization query '" + query + "'", e);
-        throw Throwables.propagate(e);
       }
     }
   }

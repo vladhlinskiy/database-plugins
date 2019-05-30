@@ -30,7 +30,7 @@ import javax.annotation.Nullable;
  * Sink support for a MySQL database.
  */
 @Plugin(type = BatchSink.PLUGIN_TYPE)
-@Name(MysqlUtil.PLUGIN_NAME)
+@Name(MysqlConstants.PLUGIN_NAME)
 @Description("Writes records to a MySQL table. Each record will be written in a row in the table")
 public class MysqlSink extends AbstractDBSink {
 
@@ -46,42 +46,42 @@ public class MysqlSink extends AbstractDBSink {
    */
   public static class MysqlSinkConfig extends DBSpecificSinkConfig {
 
-    @Name(MysqlUtil.AUTO_RECONNECT)
+    @Name(MysqlConstants.AUTO_RECONNECT)
     @Description("Should the driver try to re-establish stale and/or dead connections")
     @Nullable
     public Boolean autoReconnect;
 
-    @Name(MysqlUtil.USE_COMPRESSION)
+    @Name(MysqlConstants.USE_COMPRESSION)
     @Description("Select this option for WAN connections")
     @Nullable
     public Boolean useCompression;
 
-    @Name(MysqlUtil.SQL_MODE)
+    @Name(MysqlConstants.SQL_MODE)
     @Description("Override the default SQL_MODE session variable used by the server")
     @Nullable
     public String sqlMode;
 
-    @Name(MysqlUtil.USE_SSL)
+    @Name(MysqlConstants.USE_SSL)
     @Description("Turns on SSL encryption. Connection will fail if SSL is not available")
     @Nullable
     public String useSSL;
 
-    @Name(MysqlUtil.CLIENT_CERT_KEYSTORE_URL)
+    @Name(MysqlConstants.CLIENT_CERT_KEYSTORE_URL)
     @Description("URL to the client certificate KeyStore (if not specified, use defaults)")
     @Nullable
     public String clientCertificateKeyStoreUrl;
 
-    @Name(MysqlUtil.CLIENT_CERT_KEYSTORE_PASSWORD)
+    @Name(MysqlConstants.CLIENT_CERT_KEYSTORE_PASSWORD)
     @Description("Password for the client certificates KeyStore")
     @Nullable
     public String clientCertificateKeyStorePassword;
 
-    @Name(MysqlUtil.TRUST_CERT_KEYSTORE_URL)
+    @Name(MysqlConstants.TRUST_CERT_KEYSTORE_URL)
     @Description("URL to the trusted root certificate KeyStore (if not specified, use defaults)")
     @Nullable
     public String trustCertificateKeyStoreUrl;
 
-    @Name(MysqlUtil.TRUST_CERT_KEYSTORE_PASSWORD)
+    @Name(MysqlConstants.TRUST_CERT_KEYSTORE_PASSWORD)
     @Description("Password for the trusted root certificates KeyStore")
     @Nullable
     public String trustCertificateKeyStorePassword;
@@ -93,11 +93,11 @@ public class MysqlSink extends AbstractDBSink {
 
     @Override
     public Map<String, String> getDBSpecificArguments() {
-      return MysqlUtil.composeImmutableDbSpecificArgumentsMap(autoReconnect, useCompression, sqlMode, useSSL,
-                                                                     clientCertificateKeyStoreUrl,
-                                                                     clientCertificateKeyStorePassword,
-                                                                     trustCertificateKeyStoreUrl,
-                                                                     trustCertificateKeyStorePassword);
+      return MysqlUtil.composeDbSpecificArgumentsMap(autoReconnect, useCompression, sqlMode, useSSL,
+                                                     clientCertificateKeyStoreUrl,
+                                                     clientCertificateKeyStorePassword,
+                                                     trustCertificateKeyStoreUrl,
+                                                     trustCertificateKeyStorePassword);
     }
   }
 }

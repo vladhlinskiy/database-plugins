@@ -29,7 +29,7 @@ import javax.annotation.Nullable;
  * Batch source to read from MySQL.
  */
 @Plugin(type = "batchsource")
-@Name(MysqlUtil.PLUGIN_NAME)
+@Name(MysqlConstants.PLUGIN_NAME)
 @Description("Reads from a database table(s) using a configurable SQL query." +
   " Outputs one record for each row returned by the query.")
 public class MysqlSource extends AbstractDBSource {
@@ -43,7 +43,7 @@ public class MysqlSource extends AbstractDBSource {
 
   @Override
   protected String createConnectionString() {
-    return String.format(MysqlUtil.MYSQL_CONNECTION_STRING_FORMAT,
+    return String.format(MysqlConstants.MYSQL_CONNECTION_STRING_FORMAT,
                          mysqlSourceConfig.host, mysqlSourceConfig.port, mysqlSourceConfig.database);
   }
 
@@ -52,47 +52,47 @@ public class MysqlSource extends AbstractDBSource {
    */
   public static class MysqlSourceConfig extends DBSpecificSourceConfig {
 
-    @Name(MysqlUtil.AUTO_RECONNECT)
+    @Name(MysqlConstants.AUTO_RECONNECT)
     @Description("Should the driver try to re-establish stale and/or dead connections")
     @Nullable
     public Boolean autoReconnect;
 
-    @Name(MysqlUtil.USE_COMPRESSION)
+    @Name(MysqlConstants.USE_COMPRESSION)
     @Description("Select this option for WAN connections")
     @Nullable
     public Boolean useCompression;
 
-    @Name(MysqlUtil.SQL_MODE)
+    @Name(MysqlConstants.SQL_MODE)
     @Description("Override the default SQL_MODE session variable used by the server")
     @Nullable
     public String sqlMode;
 
-    @Name(MysqlUtil.USE_SSL)
+    @Name(MysqlConstants.USE_SSL)
     @Description("Turns on SSL encryption. Connection will fail if SSL is not available")
     @Nullable
     public String useSSL;
 
-    @Name(MysqlUtil.USE_ANSI_QUOTES)
+    @Name(MysqlConstants.USE_ANSI_QUOTES)
     @Description("Treats \" as an identifier quote character and not as a string quote character")
     @Nullable
     public Boolean useAnsiQuotes;
 
-    @Name(MysqlUtil.CLIENT_CERT_KEYSTORE_URL)
+    @Name(MysqlConstants.CLIENT_CERT_KEYSTORE_URL)
     @Description("URL to the client certificate KeyStore (if not specified, use defaults)")
     @Nullable
     public String clientCertificateKeyStoreUrl;
 
-    @Name(MysqlUtil.CLIENT_CERT_KEYSTORE_PASSWORD)
+    @Name(MysqlConstants.CLIENT_CERT_KEYSTORE_PASSWORD)
     @Description("Password for the client certificates KeyStore")
     @Nullable
     public String clientCertificateKeyStorePassword;
 
-    @Name(MysqlUtil.TRUST_CERT_KEYSTORE_URL)
+    @Name(MysqlConstants.TRUST_CERT_KEYSTORE_URL)
     @Description("URL to the trusted root certificate KeyStore (if not specified, use defaults)")
     @Nullable
     public String trustCertificateKeyStoreUrl;
 
-    @Name(MysqlUtil.TRUST_CERT_KEYSTORE_PASSWORD)
+    @Name(MysqlConstants.TRUST_CERT_KEYSTORE_PASSWORD)
     @Description("Password for the trusted root certificates KeyStore")
     @Nullable
     public String trustCertificateKeyStorePassword;
@@ -104,17 +104,17 @@ public class MysqlSource extends AbstractDBSource {
 
     @Override
     public Map<String, String> getDBSpecificArguments() {
-      return MysqlUtil.composeImmutableDbSpecificArgumentsMap(autoReconnect, useCompression, sqlMode, useSSL,
-                                                              clientCertificateKeyStoreUrl,
-                                                              clientCertificateKeyStorePassword,
-                                                              trustCertificateKeyStoreUrl,
-                                                              trustCertificateKeyStorePassword);
+      return MysqlUtil.composeDbSpecificArgumentsMap(autoReconnect, useCompression, sqlMode, useSSL,
+                                                     clientCertificateKeyStoreUrl,
+                                                     clientCertificateKeyStorePassword,
+                                                     trustCertificateKeyStoreUrl,
+                                                     trustCertificateKeyStorePassword);
     }
 
     @Override
     public String getInitQueriesString() {
       if (useAnsiQuotes != null && useAnsiQuotes) {
-        return MysqlUtil.ANSI_QUOTES_QUERY;
+        return MysqlConstants.ANSI_QUOTES_QUERY;
       }
       return "";
     }

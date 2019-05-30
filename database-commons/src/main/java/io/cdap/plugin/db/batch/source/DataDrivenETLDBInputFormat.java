@@ -111,9 +111,6 @@ public class DataDrivenETLDBInputFormat extends DataDrivenDBInputFormat {
         for (String query : ConnectionConfig.getInitQueriesList(conf.get(DBUtils.INIT_QUERIES))) {
           try (Statement statement = connection.createStatement()) {
             statement.execute(query);
-          } catch (SQLException e) {
-            LOG.error("Exception while executing initialization query '" + query + "'", e);
-            throw e;
           }
         }
       } catch (Exception e) {
