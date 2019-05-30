@@ -27,7 +27,7 @@ public final class MysqlConstants {
   public static final String PLUGIN_NAME = "Mysql";
   public static final String AUTO_RECONNECT = "autoReconnect";
   public static final String USE_COMPRESSION = "useCompression";
-  public static final String SESSION_VARIABLES = "sessionVariables";
+  public static final String SQL_MODE = "sqlMode";
   public static final String ALLOW_MULTIPLE_QUERIES = "allowMultiQueries";
   public static final String USE_SSL = "useSSL";
   public static final String USE_ANSI_QUOTES = "useAnsiQuotes";
@@ -40,10 +40,9 @@ public final class MysqlConstants {
   public static final String MYSQL_CONNECTION_STRING_FORMAT = "jdbc:mysql://%s:%s/%s";
 
   /**
-   * Corresponds to the SQL_MODE session variable. Passed to the Connector/J via '{@value #SESSION_VARIABLES}' JDBC
-   * URL parameter.
+   * Query to set SQL_MODE system variable.
    */
-  public static final String SQL_MODE = "sql_mode";
+  public static final String SET_SQL_MODE_QUERY_FORMAT = "SET SESSION sql_mode = '%s';";
 
   /**
    * Query to append 'ANSI_QUOTES' sql mode to the current value of SQL_MODE system variable.

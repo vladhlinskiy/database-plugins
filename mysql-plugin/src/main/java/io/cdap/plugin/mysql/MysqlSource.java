@@ -16,6 +16,7 @@
 
 package io.cdap.plugin.mysql;
 
+import com.google.common.base.Strings;
 import io.cdap.cdap.api.annotation.Description;
 import io.cdap.cdap.api.annotation.Name;
 import io.cdap.cdap.api.annotation.Plugin;
@@ -104,7 +105,7 @@ public class MysqlSource extends AbstractDBSource {
 
     @Override
     public Map<String, String> getDBSpecificArguments() {
-      return MysqlUtil.composeDbSpecificArgumentsMap(autoReconnect, useCompression, sqlMode, useSSL,
+      return MysqlUtil.composeDbSpecificArgumentsMap(autoReconnect, useCompression, useSSL,
                                                      clientCertificateKeyStoreUrl,
                                                      clientCertificateKeyStorePassword,
                                                      trustCertificateKeyStoreUrl,
@@ -113,10 +114,14 @@ public class MysqlSource extends AbstractDBSource {
 
     @Override
     public String getInitQueriesString() {
+      StringBuilder initQueries = new StringBuilder();
       if (useAnsiQuotes != null && useAnsiQuotes) {
-        return MysqlConstants.ANSI_QUOTES_QUERY;
+        initQueries.append(MysqlConstants.ANSI_QUOTES_QUERY);
       }
-      return "";
+      if (!Strings.isNullOrEmpty(sqlMode)) {
+        initQueries.append(String.format(MysqlConstants.SET_SQL_MODE_QUERY_FORMAT, sqlMode));
+      }
+      return initQueries.toString();
     }
   }
 }

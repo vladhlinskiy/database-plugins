@@ -33,7 +33,6 @@ public final class MysqlUtil {
    *
    * @param autoReconnect                     should the driver try to re-establish stale and/or dead connections.
    * @param useCompression                    specifies if compression must be enabled.
-   * @param sqlMode                           override the default SQL_MODE session variable used by the server.
    * @param useSSL                            specifies if SSL encryption must be turned on.
    * @param clientCertificateKeyStoreUrl      URL of the client certificate KeyStore.
    * @param clientCertificateKeyStorePassword password for the client certificates KeyStore.
@@ -43,7 +42,6 @@ public final class MysqlUtil {
    */
   public static Map<String, String> composeDbSpecificArgumentsMap(Boolean autoReconnect,
                                                                   Boolean useCompression,
-                                                                  String sqlMode,
                                                                   String useSSL,
                                                                   String clientCertificateKeyStoreUrl,
                                                                   String clientCertificateKeyStorePassword,
@@ -56,9 +54,6 @@ public final class MysqlUtil {
     }
     if (useCompression != null) {
       builder.put(MysqlConstants.USE_COMPRESSION, String.valueOf(useCompression));
-    }
-    if (sqlMode != null) {
-      builder.put(MysqlConstants.SESSION_VARIABLES, String.format("%s='%s'", MysqlConstants.SQL_MODE, sqlMode));
     }
     if (MysqlConstants.REQUIRE_SSL_OPTION.equals(useSSL)) {
       builder.put(MysqlConstants.USE_SSL, "true");

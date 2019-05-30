@@ -16,6 +16,7 @@
 
 package io.cdap.plugin.mysql;
 
+import com.google.common.base.Strings;
 import io.cdap.cdap.api.annotation.Description;
 import io.cdap.cdap.api.annotation.Name;
 import io.cdap.cdap.api.annotation.Plugin;
@@ -93,11 +94,19 @@ public class MysqlSink extends AbstractDBSink {
 
     @Override
     public Map<String, String> getDBSpecificArguments() {
-      return MysqlUtil.composeDbSpecificArgumentsMap(autoReconnect, useCompression, sqlMode, useSSL,
+      return MysqlUtil.composeDbSpecificArgumentsMap(autoReconnect, useCompression, useSSL,
                                                      clientCertificateKeyStoreUrl,
                                                      clientCertificateKeyStorePassword,
                                                      trustCertificateKeyStoreUrl,
                                                      trustCertificateKeyStorePassword);
+    }
+
+    @Override
+    public String getInitQueriesString() {
+      if (!Strings.isNullOrEmpty(sqlMode)) {
+        return String.format(MysqlConstants.SET_SQL_MODE_QUERY_FORMAT, sqlMode);
+      }
+      return "";
     }
   }
 }
