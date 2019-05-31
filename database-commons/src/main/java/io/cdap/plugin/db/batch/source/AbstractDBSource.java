@@ -61,6 +61,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
 import java.util.Properties;
+import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 /**
@@ -80,14 +81,14 @@ public abstract class AbstractDBSource extends ReferenceBatchSource<LongWritable
   }
 
   private static String removeConditionsClause(String importQueryString) {
-    importQueryString = importQueryString.replaceAll("\\s{2,}", " ").toUpperCase();
-    if (importQueryString.contains("WHERE $CONDITIONS AND")) {
-      importQueryString = importQueryString.replace("$CONDITIONS AND", "");
-    } else if (importQueryString.contains("WHERE $CONDITIONS")) {
-      importQueryString = importQueryString.replace("WHERE $CONDITIONS", "");
-    } else if (importQueryString.contains("AND $CONDITIONS")) {
-      importQueryString = importQueryString.replace("AND $CONDITIONS", "");
-    } else if (importQueryString.contains("$CONDITIONS")) {
+    importQueryString = importQueryString.replaceAll("\\s{2,}", " ");
+    if (importQueryString.toUpperCase().contains("WHERE $CONDITIONS AND")) {
+      importQueryString = importQueryString.replaceAll("(?i)" + Pattern.quote("$CONDITIONS AND"), "");
+    } else if (importQueryString.toUpperCase().contains("WHERE $CONDITIONS")) {
+      importQueryString = importQueryString.replaceAll("(?i)"  + Pattern.quote("WHERE $CONDITIONS"), "");
+    } else if (importQueryString.toUpperCase().contains("AND $CONDITIONS")) {
+      importQueryString = importQueryString.replaceAll("(?i)" + Pattern.quote("AND $CONDITIONS"), "");
+    } else if (importQueryString.toUpperCase().contains("$CONDITIONS")) {
       throw new IllegalArgumentException("Please remove the $CONDITIONS clause when fetching the input schema.");
     }
     return importQueryString;
