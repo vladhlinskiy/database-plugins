@@ -40,7 +40,6 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Properties;
 
 /**
  * Class that extends {@link DBOutputFormat} to load the database driver class correctly.
@@ -52,6 +51,7 @@ public class ETLDBOutputFormat<K extends DBWritable, V> extends DBOutputFormat<K
   public static final String AUTO_COMMIT_ENABLED = "io.cdap.plugin.db.output.autocommit.enabled";
 
   private static final Logger LOG = LoggerFactory.getLogger(ETLDBOutputFormat.class);
+
   private Configuration conf;
   private Driver driver;
   private JDBCDriverShim driverShim;
@@ -145,11 +145,8 @@ public class ETLDBOutputFormat<K extends DBWritable, V> extends DBOutputFormat<K
         }
       }
 
-      Properties properties =
-        ConnectionConfig.getConnectionArguments(conf.get(DBUtils.CONNECTION_ARGUMENTS),
-                                                conf.get(DBConfiguration.USERNAME_PROPERTY),
-                                                conf.get(DBConfiguration.PASSWORD_PROPERTY));
-      connection = DriverManager.getConnection(url, properties);
+      ConnectionConfig connectionConfig = ConnectionConfig.fromJson(conf.get(DBUtils.CONNECTION_CONFIG));
+      connection = DriverManager.getConnection(url, connectionConfig.getConnectionArguments());
 
       boolean autoCommitEnabled = conf.getBoolean(AUTO_COMMIT_ENABLED, false);
       if (autoCommitEnabled) {
@@ -162,7 +159,7 @@ public class ETLDBOutputFormat<K extends DBWritable, V> extends DBOutputFormat<K
       LOG.debug("Transaction isolation level: {}", level);
       connection.setTransactionIsolation(TransactionIsolationLevel.getLevel(level));
       // execute initialization queries if any
-      for (String query : ConnectionConfig.getInitQueriesList(conf.get(DBUtils.INIT_QUERIES))) {
+      for (String query : connectionConfig.getInitQueries()) {
         try (Statement statement = connection.createStatement()) {
           statement.execute(query);
         }

@@ -23,6 +23,8 @@ import io.cdap.cdap.api.annotation.Plugin;
 import io.cdap.plugin.db.batch.config.DBSpecificSourceConfig;
 import io.cdap.plugin.db.batch.source.AbstractDBSource;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import javax.annotation.Nullable;
 
@@ -113,15 +115,15 @@ public class MysqlSource extends AbstractDBSource {
     }
 
     @Override
-    public String getInitQueriesString() {
-      StringBuilder initQueries = new StringBuilder();
+    public List<String> getInitQueries() {
+      List<String> initQueries = new ArrayList<>();
       if (useAnsiQuotes != null && useAnsiQuotes) {
-        initQueries.append(MysqlConstants.ANSI_QUOTES_QUERY);
+        initQueries.add(MysqlConstants.ANSI_QUOTES_QUERY);
       }
       if (!Strings.isNullOrEmpty(sqlMode)) {
-        initQueries.append(String.format(MysqlConstants.SET_SQL_MODE_QUERY_FORMAT, sqlMode));
+        initQueries.add(String.format(MysqlConstants.SET_SQL_MODE_QUERY_FORMAT, sqlMode));
       }
-      return initQueries.toString();
+      return initQueries;
     }
   }
 }

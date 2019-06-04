@@ -123,7 +123,7 @@ public abstract class AbstractDBSource extends ReferenceBatchSource<LongWritable
 
       driverCleanup = loadPluginClassAndGetDriver(driverClass);
       try (Connection connection = getConnection()) {
-        executeInitQueries(connection, sourceConfig.getInitQueriesString());
+        executeInitQueries(connection, sourceConfig.getInitQueries());
         String query = sourceConfig.query;
         return loadSchemaFromDB(connection, query);
       } finally {
@@ -153,15 +153,11 @@ public abstract class AbstractDBSource extends ReferenceBatchSource<LongWritable
 
     Properties properties = sourceConfig.getConnectionArguments();
     try (Connection connection = DriverManager.getConnection(connectionString, properties)) {
-      executeInitQueries(connection, sourceConfig.getInitQueriesString());
+      executeInitQueries(connection, sourceConfig.getInitQueries());
       return loadSchemaFromDB(connection, sourceConfig.importQuery);
     } finally {
       driverCleanup.destroy();
     }
-  }
-
-  private void executeInitQueries(Connection connection, String initQueriesString) throws SQLException {
-    executeInitQueries(connection, ConnectionConfig.getInitQueriesList(initQueriesString));
   }
 
   private void executeInitQueries(Connection connection, List<String> initQueries) throws SQLException {
@@ -196,13 +192,8 @@ public abstract class AbstractDBSource extends ReferenceBatchSource<LongWritable
   }
 
   private Connection getConnection() throws SQLException {
-    Properties properties =
-      ConnectionConfig.getConnectionArguments(sourceConfig.connectionArguments,
-                                              sourceConfig.user,
-                                              sourceConfig.password);
-
     String connectionString = createConnectionString();
-    return DriverManager.getConnection(connectionString, properties);
+    return DriverManager.getConnection(connectionString, sourceConfig.getConnectionArguments());
   }
 
   @Override
@@ -237,8 +228,7 @@ public abstract class AbstractDBSource extends ReferenceBatchSource<LongWritable
       hConf.set(TransactionIsolationLevel.CONF_KEY,
                 sourceConfig.getTransactionIsolationLevel());
     }
-    hConf.set(DBUtils.CONNECTION_ARGUMENTS, sourceConfig.getConnectionArgumentsString());
-    hConf.set(DBUtils.INIT_QUERIES, sourceConfig.getInitQueriesString());
+    hConf.set(DBUtils.CONNECTION_CONFIG, sourceConfig.toJson());
     if (sourceConfig.numSplits == null || sourceConfig.numSplits != 1) {
       if (!sourceConfig.getImportQuery().contains("$CONDITIONS")) {
         throw new IllegalArgumentException(String.format("Import Query %s must contain the string '$CONDITIONS'.",
@@ -250,7 +240,6 @@ public abstract class AbstractDBSource extends ReferenceBatchSource<LongWritable
       hConf.setInt(MRJobConfig.NUM_MAPS, sourceConfig.numSplits);
     }
 
-    DBConfiguration dbConfiguration = new DBConfiguration(hConf);
     Schema schemaFromDB = loadSchemaFromDB(driverClass);
     if (sourceConfig.schema != null) {
       sourceConfig.validateSchema(schemaFromDB);

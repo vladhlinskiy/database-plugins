@@ -162,7 +162,7 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
       DBUtils.ensureJDBCDriverIsAvailable(driverClass, dbSinkConfig.getConnectionString(), dbSinkConfig.jdbcPluginName);
       try (Connection connection = DriverManager.getConnection(dbSinkConfig.getConnectionString(),
                                                                dbSinkConfig.getConnectionArguments())) {
-        executeInitQueries(connection, dbSinkConfig.getInitQueriesString());
+        executeInitQueries(connection, dbSinkConfig.getInitQueries());
 
         try (Statement statement = connection.createStatement();
              ResultSet rs = statement.executeQuery("SELECT * FROM " + dbSinkConfig.getEscapedTableName()
@@ -225,7 +225,7 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
 
     try (Connection connection = DriverManager.getConnection(connectionString,
                                                              dbSinkConfig.getConnectionArguments())) {
-      executeInitQueries(connection, dbSinkConfig.getInitQueriesString());
+      executeInitQueries(connection, dbSinkConfig.getInitQueries());
       try (Statement statement = connection.createStatement();
            // Run a query against the DB table that returns 0 records, but returns valid ResultSetMetadata
            // that can be used to construct DBRecord objects to sink to the database table.
@@ -263,7 +263,7 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
     }
 
     try (Connection connection = DriverManager.getConnection(connectionString, dbSinkConfig.getConnectionArguments())) {
-      executeInitQueries(connection, dbSinkConfig.getInitQueriesString());
+      executeInitQueries(connection, dbSinkConfig.getInitQueries());
       try (ResultSet tables = connection.getMetaData().getTables(null, null, tableName, null)) {
         if (!tables.next()) {
           throw new InvalidStageException("Table " + tableName + " does not exist. " +
@@ -332,10 +332,6 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
     }
   }
 
-  private void executeInitQueries(Connection connection, String initQueriesString) throws SQLException {
-    executeInitQueries(connection, ConnectionConfig.getInitQueriesList(initQueriesString));
-  }
-
   private void executeInitQueries(Connection connection, List<String> initQueries) throws SQLException {
     for (String query : initQueries) {
       try (Statement statement = connection.createStatement()) {
@@ -378,8 +374,7 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
         conf.put(TransactionIsolationLevel.CONF_KEY,
                  dbSinkConfig.getTransactionIsolationLevel());
       }
-      conf.put(DBUtils.CONNECTION_ARGUMENTS, dbSinkConfig.getConnectionArgumentsString());
-      conf.put(DBUtils.INIT_QUERIES, dbSinkConfig.getInitQueriesString());
+      conf.put(DBUtils.CONNECTION_CONFIG, dbSinkConfig.toJson());
       conf.put(DBConfiguration.DRIVER_CLASS_PROPERTY, driverClass.getName());
       conf.put(DBConfiguration.URL_PROPERTY, connectionString);
       if (dbSinkConfig.user != null) {

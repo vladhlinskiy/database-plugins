@@ -24,6 +24,8 @@ import io.cdap.cdap.etl.api.batch.BatchSink;
 import io.cdap.plugin.db.batch.config.DBSpecificSinkConfig;
 import io.cdap.plugin.db.batch.sink.AbstractDBSink;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import javax.annotation.Nullable;
 
@@ -102,11 +104,11 @@ public class MysqlSink extends AbstractDBSink {
     }
 
     @Override
-    public String getInitQueriesString() {
+    public List<String> getInitQueries() {
       if (!Strings.isNullOrEmpty(sqlMode)) {
-        return String.format(MysqlConstants.SET_SQL_MODE_QUERY_FORMAT, sqlMode);
+        return Collections.singletonList(String.format(MysqlConstants.SET_SQL_MODE_QUERY_FORMAT, sqlMode));
       }
-      return "";
+      return Collections.emptyList();
     }
   }
 }

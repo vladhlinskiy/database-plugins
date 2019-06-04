@@ -39,7 +39,6 @@ import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Properties;
 
 /**
  * Class that extends {@link DBInputFormat} to load the database driver class correctly.
@@ -90,12 +89,8 @@ public class DataDrivenETLDBInputFormat extends DataDrivenDBInputFormat {
           }
         }
 
-        Properties properties =
-          ConnectionConfig.getConnectionArguments(conf.get(DBUtils.CONNECTION_ARGUMENTS),
-                                                  conf.get(DBConfiguration.USERNAME_PROPERTY),
-                                                  conf.get(DBConfiguration.PASSWORD_PROPERTY));
-        connection = DriverManager.getConnection(url, properties);
-
+        ConnectionConfig connectionConfig = ConnectionConfig.fromJson(conf.get(DBUtils.CONNECTION_CONFIG));
+        connection = DriverManager.getConnection(url, connectionConfig.getConnectionArguments());
 
         boolean autoCommitEnabled = conf.getBoolean(AUTO_COMMIT_ENABLED, false);
         if (autoCommitEnabled) {
@@ -108,7 +103,7 @@ public class DataDrivenETLDBInputFormat extends DataDrivenDBInputFormat {
         LOG.debug("Transaction isolation level: {}", level);
         connection.setTransactionIsolation(TransactionIsolationLevel.getLevel(level));
         // execute initialization queries if any
-        for (String query : ConnectionConfig.getInitQueriesList(conf.get(DBUtils.INIT_QUERIES))) {
+        for (String query : connectionConfig.getInitQueries()) {
           try (Statement statement = connection.createStatement()) {
             statement.execute(query);
           }
