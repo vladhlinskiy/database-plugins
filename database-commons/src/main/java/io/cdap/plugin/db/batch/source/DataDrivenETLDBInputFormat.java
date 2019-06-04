@@ -17,7 +17,8 @@
 package io.cdap.plugin.db.batch.source;
 
 import com.google.common.base.Throwables;
-import io.cdap.plugin.db.ConnectionConfig;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import io.cdap.plugin.db.JDBCDriverShim;
 import io.cdap.plugin.db.batch.NoOpCommitConnection;
 import io.cdap.plugin.db.batch.TransactionIsolationLevel;
@@ -34,11 +35,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -47,6 +51,9 @@ import java.util.Properties;
 public class DataDrivenETLDBInputFormat extends DataDrivenDBInputFormat {
   public static final String AUTO_COMMIT_ENABLED = "io.cdap.plugin.db.autocommit.enabled";
 
+  private static final Gson GSON = new Gson();
+  private static final Type STRING_LIST_TYPE = new TypeToken<List<String>>() { }.getType();
+  private static final Type STRING_MAP_TYPE = new TypeToken<Map<String, String>>() { }.getType();
   private static final Logger LOG = LoggerFactory.getLogger(DataDrivenETLDBInputFormat.class);
   private Driver driver;
   private JDBCDriverShim driverShim;
@@ -90,12 +97,11 @@ public class DataDrivenETLDBInputFormat extends DataDrivenDBInputFormat {
           }
         }
 
-        Properties properties =
-          ConnectionConfig.getConnectionArguments(conf.get(DBUtils.CONNECTION_ARGUMENTS),
-                                                  conf.get(DBConfiguration.USERNAME_PROPERTY),
-                                                  conf.get(DBConfiguration.PASSWORD_PROPERTY));
+        Map<String, String> connectionArguments =
+          GSON.fromJson(conf.get(DBUtils.CONNECTION_ARGUMENTS), STRING_MAP_TYPE);
+        Properties properties = new Properties();
+        properties.putAll(connectionArguments);
         connection = DriverManager.getConnection(url, properties);
-
 
         boolean autoCommitEnabled = conf.getBoolean(AUTO_COMMIT_ENABLED, false);
         if (autoCommitEnabled) {
@@ -108,7 +114,7 @@ public class DataDrivenETLDBInputFormat extends DataDrivenDBInputFormat {
         LOG.debug("Transaction isolation level: {}", level);
         connection.setTransactionIsolation(TransactionIsolationLevel.getLevel(level));
         // execute initialization queries if any
-        for (String query : ConnectionConfig.getInitQueriesList(conf.get(DBUtils.INIT_QUERIES))) {
+        for (String query : GSON.<List<String>>fromJson(conf.get(DBUtils.INIT_QUERIES), STRING_LIST_TYPE)) {
           try (Statement statement = connection.createStatement()) {
             statement.execute(query);
           }
