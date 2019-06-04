@@ -17,7 +17,7 @@
 package io.cdap.plugin.db.batch.source;
 
 import com.google.common.base.Throwables;
-import io.cdap.plugin.db.ConnectionConfig;
+import io.cdap.plugin.db.DBFormatConfig;
 import io.cdap.plugin.db.JDBCDriverShim;
 import io.cdap.plugin.db.batch.NoOpCommitConnection;
 import io.cdap.plugin.db.batch.TransactionIsolationLevel;
@@ -45,7 +45,6 @@ import java.util.Properties;
  * Class that extends {@link DBInputFormat} to load the database driver class correctly.
  */
 public class DataDrivenETLDBInputFormat extends DataDrivenDBInputFormat {
-  public static final String AUTO_COMMIT_ENABLED = "io.cdap.plugin.db.autocommit.enabled";
 
   private static final Logger LOG = LoggerFactory.getLogger(DataDrivenETLDBInputFormat.class);
   private Driver driver;
@@ -60,25 +59,26 @@ public class DataDrivenETLDBInputFormat extends DataDrivenDBInputFormat {
     dbConf.setInputClass(inputClass);
     dbConf.setInputQuery(inputQuery);
     dbConf.setInputBoundingQuery(inputBoundingQuery);
-    conf.setBoolean(AUTO_COMMIT_ENABLED, enableAutoCommit);
+    new DBFormatConfig(conf).setAutoCommitEnabled(enableAutoCommit);
   }
 
   @Override
   public Connection getConnection() {
     if (this.connection == null) {
-      Configuration conf = getConf();
+      DBFormatConfig conf = new DBFormatConfig(getConf());
       try {
-        String url = conf.get(DBConfiguration.URL_PROPERTY);
+        String url = conf.getConfiguration().get(DBConfiguration.URL_PROPERTY);
         try {
           // throws SQLException if no suitable driver is found
           DriverManager.getDriver(url);
         } catch (SQLException e) {
           if (driverShim == null) {
             if (driver == null) {
-              ClassLoader classLoader = conf.getClassLoader();
+              ClassLoader classLoader = conf.getConfiguration().getClassLoader();
+              String driverClassName = conf.getConfiguration().get(DBConfiguration.DRIVER_CLASS_PROPERTY);
               @SuppressWarnings("unchecked")
               Class<? extends Driver> driverClass =
-                (Class<? extends Driver>) classLoader.loadClass(conf.get(DBConfiguration.DRIVER_CLASS_PROPERTY));
+                (Class<? extends Driver>) classLoader.loadClass(driverClassName);
               driver = driverClass.newInstance();
 
               // De-register the default driver that gets registered when driver class is loaded.
@@ -90,25 +90,21 @@ public class DataDrivenETLDBInputFormat extends DataDrivenDBInputFormat {
           }
         }
 
-        Properties properties =
-          ConnectionConfig.getConnectionArguments(conf.get(DBUtils.CONNECTION_ARGUMENTS),
-                                                  conf.get(DBConfiguration.USERNAME_PROPERTY),
-                                                  conf.get(DBConfiguration.PASSWORD_PROPERTY));
+        Properties properties = new Properties();
+        properties.putAll(conf.getConnectionArguments());
         connection = DriverManager.getConnection(url, properties);
 
-
-        boolean autoCommitEnabled = conf.getBoolean(AUTO_COMMIT_ENABLED, false);
-        if (autoCommitEnabled) {
+        if (conf.isAutoCommitEnabled()) {
           // hack to work around jdbc drivers like the hive driver that throw exceptions on commit
           this.connection = new NoOpCommitConnection(this.connection);
         } else {
           this.connection.setAutoCommit(false);
         }
-        String level = conf.get(TransactionIsolationLevel.CONF_KEY);
+        String level = conf.getConfiguration().get(TransactionIsolationLevel.CONF_KEY);
         LOG.debug("Transaction isolation level: {}", level);
         connection.setTransactionIsolation(TransactionIsolationLevel.getLevel(level));
         // execute initialization queries if any
-        for (String query : ConnectionConfig.getInitQueriesList(conf.get(DBUtils.INIT_QUERIES))) {
+        for (String query : conf.getInitQueries()) {
           try (Statement statement = connection.createStatement()) {
             statement.execute(query);
           }

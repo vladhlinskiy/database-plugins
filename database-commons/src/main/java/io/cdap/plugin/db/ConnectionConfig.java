@@ -29,8 +29,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
 /**
@@ -77,14 +75,47 @@ public abstract class ConnectionConfig extends PluginConfig {
   }
 
   /**
-   * Parses connection arguments into a {@link Properties}.
+   * @return {@link java.util.Properties} representation of the {@link ConnectionConfig#getConnectionArguments()}.
+   */
+  public Properties getConnectionProperties() {
+    Properties properties = new Properties();
+    properties.putAll(getConnectionArguments());
+    return properties;
+  }
+
+  /**
+   * @return a {@link Map} of connection arguments, parsed from the config.
+   */
+  public Map<String, String> getConnectionArguments() {
+    Map<String, String> arguments = getConnectionArguments(this.connectionArguments, user, password);
+    arguments.putAll(getDBSpecificArguments());
+    return arguments;
+  }
+
+  /**
+   * Constructs a connection string from host, port and database properties in a database-specific format.
+   * @return connection string specific to a particular database.
+   */
+  public abstract String getConnectionString();
+
+  /**
+   * Returns list of initialization queries. Initialization queries supposed to be executed preserving order right after
+   * connection establishing. In the case when there are no initialization queries, an empty list will be returned.
+   * @return list of initialization queries.
+   */
+  public List<String> getInitQueries() {
+    return Collections.emptyList();
+  }
+
+  /**
+   * Parses connection arguments into a {@link Map}.
    *
    * @param connectionArguments See {@link ConnectionConfig#connectionArguments}.
    * @param user                See {@link ConnectionConfig#user}.
    * @param password            See {@link ConnectionConfig#password}.
    */
-  public static Properties getConnectionArguments(@Nullable String connectionArguments,
-                                                  @Nullable String user, @Nullable String password) {
+  protected static Map<String, String> getConnectionArguments(@Nullable String connectionArguments,
+                                                     @Nullable String user, @Nullable String password) {
     KeyValueListParser kvParser = new KeyValueListParser("\\s*;\\s*", "=");
 
     Map<String, String> connectionArgumentsMap = new HashMap<>();
@@ -99,70 +130,7 @@ public abstract class ConnectionConfig extends PluginConfig {
       connectionArgumentsMap.put("password", password);
     }
 
-    Properties properties = new Properties();
-    properties.putAll(connectionArgumentsMap);
-
-    return properties;
-  }
-
-  /**
-   *
-   * Parses single initialization queries string where each query separated by ';' character into a list of
-   * initialization queries. Each resulting query ends with ';' character.
-   *
-   * @param initQueriesString single initialization queries string.
-   * @return list of initialization queries.
-   */
-  public static List<String> getInitQueriesList(@Nullable String initQueriesString) {
-    if (Strings.isNullOrEmpty(initQueriesString)) {
-      return Collections.emptyList();
-    }
-
-    return Stream.of(initQueriesString.split("(?<=;)"))
-      .map(String::trim)
-      .collect(Collectors.toList());
-  }
-
-  /**
-   * @return a {@link Properties} of connection arguments, parsed from the config.
-   */
-  public Properties getConnectionArguments() {
-    Properties arguments = getConnectionArguments(this.connectionArguments, user, password);
-    arguments.putAll(getDBSpecificArguments());
-    return arguments;
-  }
-
-  /**
-   * Returns all configuration properties including database-specific ones as single string.
-   * In the case when there are no connection arguments, an empty string will be returned.
-   * @return connection arguments as string with '=' as key-value delimiter and ';' as pair delimiter.
-   */
-  public String getConnectionArgumentsString() {
-    if (this.connectionArguments == null) {
-      return getDBSpecificArgumentsString();
-    }
-
-    if (getDBSpecificArguments().isEmpty()) {
-      return this.connectionArguments;
-    }
-
-    return this.connectionArguments + ";" + getDBSpecificArgumentsString();
-  }
-
-  /**
-   * Constructs a connection string from host, port and database properties in a database-specific format.
-   * @return connection string specific to a particular database.
-   */
-  public abstract String getConnectionString();
-
-  /**
-   * Returns list of initialization queries as a single string separated by ';' character. Initialization queries
-   * supposed to be executed preserving order right after connection establishing.
-   * In the case when there are no initialization queries, an empty string will be returned.
-   * @return list of initialization queries as a single string separated by ';' character.
-   */
-  public String getInitQueriesString() {
-    return "";
+    return connectionArgumentsMap;
   }
 
   /**
@@ -173,14 +141,4 @@ public abstract class ConnectionConfig extends PluginConfig {
     return Collections.emptyMap();
   }
 
-  /**
-   * Returns database-specific configuration properties as single string.
-   * In the case when there are no database-specific arguments, an empty string will be returned.
-   * @return additional connection arguments as string with '=' as key-value delimiter and ';' as pair delimiter.
-   */
-  protected String getDBSpecificArgumentsString() {
-    return getDBSpecificArguments().entrySet().stream()
-      .map(e -> String.format("%s=%s", e.getKey(), e.getValue()))
-      .collect(Collectors.joining(";"));
-  }
 }

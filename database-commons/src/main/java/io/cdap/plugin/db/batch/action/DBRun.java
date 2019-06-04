@@ -16,7 +16,6 @@
 
 package io.cdap.plugin.db.batch.action;
 
-import io.cdap.plugin.db.ConnectionConfig;
 import io.cdap.plugin.util.DBUtils;
 import io.cdap.plugin.util.DriverCleanup;
 
@@ -54,9 +53,8 @@ public class DBRun {
                                                           config.jdbcPluginName);
 
       try (Connection connection = DriverManager.getConnection(
-        config.getConnectionString(),
-        config.getConnectionArguments())) {
-        executeInitQueries(connection, config.getInitQueriesString());
+        config.getConnectionString(), config.getConnectionProperties())) {
+        executeInitQueries(connection, config.getInitQueries());
         if (!enableAutoCommit) {
           connection.setAutoCommit(false);
         }
@@ -72,10 +70,6 @@ public class DBRun {
         driverCleanup.destroy();
       }
     }
-  }
-
-  private void executeInitQueries(Connection connection, String initQueriesString) throws SQLException {
-    executeInitQueries(connection, ConnectionConfig.getInitQueriesList(initQueriesString));
   }
 
   private void executeInitQueries(Connection connection, List<String> initQueries) throws SQLException {
