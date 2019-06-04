@@ -18,13 +18,13 @@ package io.cdap.plugin.db.batch.sink;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import io.cdap.cdap.api.annotation.Description;
 import io.cdap.cdap.api.annotation.Macro;
 import io.cdap.cdap.api.annotation.Name;
 import io.cdap.cdap.api.data.batch.Output;
-import io.cdap.cdap.api.data.batch.OutputFormatProvider;
 import io.cdap.cdap.api.data.format.StructuredRecord;
 import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.cdap.api.dataset.lib.KeyValue;
@@ -37,12 +37,13 @@ import io.cdap.cdap.etl.api.validation.InvalidStageException;
 import io.cdap.plugin.common.LineageRecorder;
 import io.cdap.plugin.common.ReferenceBatchSink;
 import io.cdap.plugin.common.ReferencePluginConfig;
+import io.cdap.plugin.common.batch.sink.SinkOutputFormatProvider;
 import io.cdap.plugin.db.CommonSchemaReader;
 import io.cdap.plugin.db.ConnectionConfig;
+import io.cdap.plugin.db.ConnectionConfigAccessor;
 import io.cdap.plugin.db.DBConfig;
 import io.cdap.plugin.db.DBRecord;
 import io.cdap.plugin.db.SchemaReader;
-import io.cdap.plugin.db.batch.TransactionIsolationLevel;
 import io.cdap.plugin.util.DBUtils;
 import io.cdap.plugin.util.DriverCleanup;
 import org.apache.hadoop.io.NullWritable;
@@ -60,12 +61,12 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
@@ -128,8 +129,27 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
 
     emitLineage(context, outputSchema.getFields());
 
-    context.addOutput(Output.of(dbSinkConfig.referenceName, new DBOutputFormatProvider(
-      dbSinkConfig, connectionString, dbColumns, driverClass)));
+    ConnectionConfigAccessor configAccessor = new ConnectionConfigAccessor();
+    configAccessor.setConnectionArguments(dbSinkConfig.getConnectionArguments());
+    configAccessor.setInitQueries(dbSinkConfig.getInitQueries());
+    configAccessor.getConfiguration().set(DBConfiguration.DRIVER_CLASS_PROPERTY, driverClass.getName());
+    configAccessor.getConfiguration().set(DBConfiguration.URL_PROPERTY, connectionString);
+    configAccessor.getConfiguration().set(DBConfiguration.OUTPUT_TABLE_NAME_PROPERTY,
+                                          dbSinkConfig.getEscapedTableName());
+    configAccessor.getConfiguration().set(DBConfiguration.OUTPUT_FIELD_NAMES_PROPERTY, dbColumns);
+    if (dbSinkConfig.user != null) {
+      configAccessor.getConfiguration().set(DBConfiguration.USERNAME_PROPERTY, dbSinkConfig.user);
+    }
+    if (dbSinkConfig.password != null) {
+      configAccessor.getConfiguration().set(DBConfiguration.PASSWORD_PROPERTY, dbSinkConfig.password);
+    }
+
+    if (!Strings.isNullOrEmpty(dbSinkConfig.getTransactionIsolationLevel())) {
+      configAccessor.setTransactionIsolationLevel(dbSinkConfig.getTransactionIsolationLevel());
+    }
+
+    context.addOutput(Output.of(dbSinkConfig.referenceName, new SinkOutputFormatProvider(ETLDBOutputFormat.class,
+      configAccessor.getConfiguration())));
   }
 
   /**
@@ -160,9 +180,11 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
     List<Schema.Field> inferredFields = new ArrayList<>();
     try {
       DBUtils.ensureJDBCDriverIsAvailable(driverClass, dbSinkConfig.getConnectionString(), dbSinkConfig.jdbcPluginName);
+      Properties connectionProperties = new Properties();
+      connectionProperties.putAll(dbSinkConfig.getConnectionArguments());
       try (Connection connection = DriverManager.getConnection(dbSinkConfig.getConnectionString(),
-                                                               dbSinkConfig.getConnectionArguments())) {
-        executeInitQueries(connection, dbSinkConfig.getInitQueriesString());
+                                                               connectionProperties)) {
+        executeInitQueries(connection, dbSinkConfig.getInitQueries());
 
         try (Statement statement = connection.createStatement();
              ResultSet rs = statement.executeQuery("SELECT * FROM " + dbSinkConfig.getEscapedTableName()
@@ -223,9 +245,10 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
 
     driverCleanup = DBUtils.ensureJDBCDriverIsAvailable(driverClass, connectionString, dbSinkConfig.jdbcPluginName);
 
-    try (Connection connection = DriverManager.getConnection(connectionString,
-                                                             dbSinkConfig.getConnectionArguments())) {
-      executeInitQueries(connection, dbSinkConfig.getInitQueriesString());
+    Properties connectionProperties = new Properties();
+    connectionProperties.putAll(dbSinkConfig.getConnectionArguments());
+    try (Connection connection = DriverManager.getConnection(connectionString, connectionProperties)) {
+      executeInitQueries(connection, dbSinkConfig.getInitQueries());
       try (Statement statement = connection.createStatement();
            // Run a query against the DB table that returns 0 records, but returns valid ResultSetMetadata
            // that can be used to construct DBRecord objects to sink to the database table.
@@ -262,8 +285,10 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
       throw Throwables.propagate(e);
     }
 
-    try (Connection connection = DriverManager.getConnection(connectionString, dbSinkConfig.getConnectionArguments())) {
-      executeInitQueries(connection, dbSinkConfig.getInitQueriesString());
+    Properties connectionProperties = new Properties();
+    connectionProperties.putAll(dbSinkConfig.getConnectionArguments());
+    try (Connection connection = DriverManager.getConnection(connectionString, connectionProperties)) {
+      executeInitQueries(connection, dbSinkConfig.getInitQueries());
       try (ResultSet tables = connection.getMetaData().getTables(null, null, tableName, null)) {
         if (!tables.next()) {
           throw new InvalidStageException("Table " + tableName + " does not exist. " +
@@ -332,10 +357,6 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
     }
   }
 
-  private void executeInitQueries(Connection connection, String initQueriesString) throws SQLException {
-    executeInitQueries(connection, ConnectionConfig.getInitQueriesList(initQueriesString));
-  }
-
   private void executeInitQueries(Connection connection, List<String> initQueries) throws SQLException {
     for (String query : initQueries) {
       try (Statement statement = connection.createStatement()) {
@@ -364,42 +385,6 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
      */
     protected String getEscapedTableName() {
       return tableName;
-    }
-  }
-
-  private static class DBOutputFormatProvider implements OutputFormatProvider {
-    private final Map<String, String> conf;
-
-    DBOutputFormatProvider(DBSinkConfig dbSinkConfig, String connectionString,
-                           String dbColumns, Class<? extends Driver> driverClass) {
-      this.conf = new HashMap<>();
-
-      if (dbSinkConfig.getTransactionIsolationLevel() != null) {
-        conf.put(TransactionIsolationLevel.CONF_KEY,
-                 dbSinkConfig.getTransactionIsolationLevel());
-      }
-      conf.put(DBUtils.CONNECTION_ARGUMENTS, dbSinkConfig.getConnectionArgumentsString());
-      conf.put(DBUtils.INIT_QUERIES, dbSinkConfig.getInitQueriesString());
-      conf.put(DBConfiguration.DRIVER_CLASS_PROPERTY, driverClass.getName());
-      conf.put(DBConfiguration.URL_PROPERTY, connectionString);
-      if (dbSinkConfig.user != null) {
-        conf.put(DBConfiguration.USERNAME_PROPERTY, dbSinkConfig.user);
-      }
-      if (dbSinkConfig.password != null) {
-        conf.put(DBConfiguration.PASSWORD_PROPERTY, dbSinkConfig.password);
-      }
-      conf.put(DBConfiguration.OUTPUT_TABLE_NAME_PROPERTY, dbSinkConfig.getEscapedTableName());
-      conf.put(DBConfiguration.OUTPUT_FIELD_NAMES_PROPERTY, dbColumns);
-    }
-
-    @Override
-    public String getOutputFormatClassName() {
-      return ETLDBOutputFormat.class.getName();
-    }
-
-    @Override
-    public Map<String, String> getOutputFormatConfiguration() {
-      return conf;
     }
   }
 }
