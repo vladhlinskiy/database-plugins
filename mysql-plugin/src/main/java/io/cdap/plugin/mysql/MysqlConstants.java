@@ -32,7 +32,7 @@ public final class MysqlConstants {
   public static final String USE_SSL = "useSSL";
   public static final String USE_ANSI_QUOTES = "useAnsiQuotes";
   public static final String NO_SSL_OPTION = "No";
-  public static final String REQUIRE_SSL_OPTION = "Require";
+  public static final String REQUIRE_SSL_OPTION = "Yes";
   public static final String CLIENT_CERT_KEYSTORE_URL = "clientCertificateKeyStoreUrl";
   public static final String CLIENT_CERT_KEYSTORE_PASSWORD = "clientCertificateKeyStorePassword";
   public static final String TRUST_CERT_KEYSTORE_URL = "trustCertificateKeyStoreUrl";

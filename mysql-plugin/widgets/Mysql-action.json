@@ -67,7 +67,7 @@
           "widget-type": "select",
           "widget-attributes": {
             "default": "If available",
-            "values": ["No", "If available", "Require"]
+            "values": ["If available", "Yes", "No"]
           }
         },
         {
@@ -77,7 +77,7 @@
         },
         {
           "widget-type": "password",
-          "label": "Keystore password",
+          "label": "Keystore Password",
           "name": "clientCertificateKeyStorePassword"
         },
         {
@@ -87,7 +87,7 @@
         },
         {
           "widget-type": "password",
-          "label": "Truststore password",
+          "label": "Truststore Password",
           "name": "trustCertificateKeyStorePassword"
         }
       ]
@@ -97,23 +97,23 @@
       "properties": [
         {
           "widget-type": "toggle",
-          "label": "Use compression protocol",
+          "label": "Use Compression",
           "name": "useCompression",
           "widget-attributes": {
             "on": {
               "value": "true",
-              "label": "On"
+              "label": "Yes"
             },
             "off": {
               "value": "false",
-              "label": "Off"
+              "label": "No"
             },
             "default": "false"
           }
         },
         {
           "widget-type": "toggle",
-          "label": "Use ANSI quotes to quote identifiers",
+          "label": "Use ANSI Quotes",
           "name": "useAnsiQuotes",
           "widget-attributes": {
             "on": {
@@ -146,7 +146,7 @@
         },
         {
           "widget-type": "toggle",
-          "label": "Auto reconnect",
+          "label": "Auto Reconnect",
           "name": "autoReconnect",
           "widget-attributes": {
             "on": {
