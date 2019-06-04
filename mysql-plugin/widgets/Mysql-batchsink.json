@@ -143,11 +143,11 @@
           "widget-attributes": {
             "on": {
               "value": "true",
-              "label": "On"
+              "label": "Yes"
             },
             "off": {
               "value": "false",
-              "label": "Off"
+              "label": "No"
             },
             "default": "false"
           }
