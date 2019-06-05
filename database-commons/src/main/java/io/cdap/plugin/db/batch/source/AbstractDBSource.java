@@ -17,8 +17,6 @@
 package io.cdap.plugin.db.batch.source;
 
 import com.google.common.base.Strings;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import io.cdap.cdap.api.annotation.Description;
 import io.cdap.cdap.api.annotation.Macro;
 import io.cdap.cdap.api.annotation.Name;
@@ -55,7 +53,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.lang.reflect.Type;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.DriverManager;
@@ -63,7 +60,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
@@ -75,9 +71,6 @@ public abstract class AbstractDBSource extends ReferenceBatchSource<LongWritable
 
   private static final Logger LOG = LoggerFactory.getLogger(AbstractDBSource.class);
   private static final SchemaTypeAdapter SCHEMA_TYPE_ADAPTER = new SchemaTypeAdapter();
-  private static final Gson GSON = new Gson();
-  private static final Type STRING_LIST_TYPE = new TypeToken<List<String>>() { }.getType();
-  private static final Type STRING_MAP_TYPE = new TypeToken<Map<String, String>>() { }.getType();
 
   protected final DBSourceConfig sourceConfig;
   protected Class<? extends Driver> driverClass;
@@ -235,8 +228,7 @@ public abstract class AbstractDBSource extends ReferenceBatchSource<LongWritable
       hConf.set(TransactionIsolationLevel.CONF_KEY,
                 sourceConfig.getTransactionIsolationLevel());
     }
-    hConf.set(DBUtils.CONNECTION_ARGUMENTS, GSON.toJson(sourceConfig.getConnectionArguments(), STRING_MAP_TYPE));
-    hConf.set(DBUtils.INIT_QUERIES, GSON.toJson(sourceConfig.getInitQueries(), STRING_LIST_TYPE));
+    hConf.set(DBUtils.CONNECTION_CONFIG, sourceConfig.toJson());
     if (sourceConfig.numSplits == null || sourceConfig.numSplits != 1) {
       if (!sourceConfig.getImportQuery().contains("$CONDITIONS")) {
         throw new IllegalArgumentException(String.format("Import Query %s must contain the string '$CONDITIONS'.",

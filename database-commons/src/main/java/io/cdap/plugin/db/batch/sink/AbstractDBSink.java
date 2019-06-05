@@ -20,8 +20,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import io.cdap.cdap.api.annotation.Description;
 import io.cdap.cdap.api.annotation.Macro;
 import io.cdap.cdap.api.annotation.Name;
@@ -52,7 +50,6 @@ import org.apache.hadoop.mapred.lib.db.DBConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.Type;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.DriverManager;
@@ -78,9 +75,6 @@ import java.util.stream.Collectors;
  */
 public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord, DBRecord, NullWritable> {
   private static final Logger LOG = LoggerFactory.getLogger(AbstractDBSink.class);
-  private static final Gson GSON = new Gson();
-  private static final Type STRING_LIST_TYPE = new TypeToken<List<String>>() { }.getType();
-  private static final Type STRING_MAP_TYPE = new TypeToken<Map<String, String>>() { }.getType();
 
   private final DBSinkConfig dbSinkConfig;
   private Class<? extends Driver> driverClass;
@@ -380,8 +374,7 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
         conf.put(TransactionIsolationLevel.CONF_KEY,
                  dbSinkConfig.getTransactionIsolationLevel());
       }
-      conf.put(DBUtils.CONNECTION_ARGUMENTS, GSON.toJson(dbSinkConfig.getConnectionArguments(), STRING_MAP_TYPE));
-      conf.put(DBUtils.INIT_QUERIES, GSON.toJson(dbSinkConfig.getInitQueries(), STRING_LIST_TYPE));
+      conf.put(DBUtils.CONNECTION_CONFIG, dbSinkConfig.toJson());
       conf.put(DBConfiguration.DRIVER_CLASS_PROPERTY, driverClass.getName());
       conf.put(DBConfiguration.URL_PROPERTY, connectionString);
       if (dbSinkConfig.user != null) {

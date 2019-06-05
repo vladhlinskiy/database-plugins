@@ -17,6 +17,16 @@
 package io.cdap.plugin.db;
 
 import com.google.common.base.Strings;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonSerializationContext;
+import com.google.gson.JsonSerializer;
 import io.cdap.cdap.api.annotation.Description;
 import io.cdap.cdap.api.annotation.Macro;
 import io.cdap.cdap.api.annotation.Name;
@@ -24,6 +34,7 @@ import io.cdap.cdap.api.dataset.lib.KeyValue;
 import io.cdap.cdap.api.plugin.PluginConfig;
 import io.cdap.plugin.common.KeyValueListParser;
 
+import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -45,6 +56,14 @@ public abstract class ConnectionConfig extends PluginConfig {
   public static final String CONNECTION_ARGUMENTS = "connectionArguments";
   public static final String JDBC_PLUGIN_NAME = "jdbcPluginName";
   public static final String JDBC_PLUGIN_TYPE = "jdbc";
+
+  private static final Gson GSON;
+
+  static {
+    GsonBuilder gsonBuilder = new GsonBuilder();
+    gsonBuilder.registerTypeAdapter(ConnectionConfig.class, new ConnectionConfigAdapter<ConnectionConfig>());
+    GSON = gsonBuilder.create();
+  }
 
   @Name(JDBC_PLUGIN_NAME)
   @Description("Name of the JDBC driver to use. This is the value of the 'jdbcPluginName' key defined in the JSON " +
@@ -98,6 +117,14 @@ public abstract class ConnectionConfig extends PluginConfig {
     return Collections.emptyList();
   }
 
+  public String toJson() {
+    return GSON.toJson(this, ConnectionConfig.class);
+  }
+
+  public static ConnectionConfig fromJson(String json) {
+    return GSON.fromJson(json, ConnectionConfig.class);
+  }
+
   /**
    * Parses connection arguments into a {@link Properties}.
    *
@@ -135,4 +162,28 @@ public abstract class ConnectionConfig extends PluginConfig {
     return Collections.emptyMap();
   }
 
+  static class ConnectionConfigAdapter<T> implements JsonSerializer<T>, JsonDeserializer<T> {
+    @Override
+    public JsonElement serialize(T src, Type typeOfSrc, JsonSerializationContext context) {
+      JsonObject result = new JsonObject();
+      result.add("type", new JsonPrimitive(src.getClass().getCanonicalName()));
+      result.add("properties", context.serialize(src, src.getClass()));
+
+      return result;
+    }
+
+    @Override
+    public T deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
+      throws JsonParseException {
+      JsonObject jsonObject = json.getAsJsonObject();
+      String type = jsonObject.get("type").getAsString();
+      JsonElement element = jsonObject.get("properties");
+
+      try {
+        return context.deserialize(element, Class.forName(type));
+      } catch (ClassNotFoundException e) {
+        throw new JsonParseException("Unknown element type: " + type, e);
+      }
+    }
+  }
 }
