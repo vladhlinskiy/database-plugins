@@ -89,9 +89,10 @@ public class MysqlSourceTestRun extends MysqlPluginTestBase {
   @SuppressWarnings("ConstantConditions")
   public void testDBSource() throws Exception {
     String importQuery = "SELECT ID, NAME, SCORE, GRADUATED, TINY, MEDIUMINT_COL, SMALL, BIG, FLOAT_COL, " +
-      "REAL_COL, NUMERIC_COL, CHAR_COL, DECIMAL_COL, BIT_COL, BINARY_COL, DATE_COL, TIME_COL, TIMESTAMP_COL, " +
-      "VARBINARY_COL, BLOB_COL, MEDIUMBLOB_COL, TINYBLOB_COL, YEAR_COL, LONGBLOB_COL, TEXT_COL, TINYTEXT_COL, " +
-      "MEDIUMTEXT_COL, LONGTEXT_COL FROM my_table WHERE ID < 3 AND $CONDITIONS";
+      "REAL_COL, NUMERIC_COL, CHAR_COL, DECIMAL_COL, BIT_COL, BINARY_COL, DATE_COL, TIME_COL, DATETIME_COL, " +
+      "TIMESTAMP_COL, VARBINARY_COL, BLOB_COL, MEDIUMBLOB_COL, TINYBLOB_COL, YEAR_COL, LONGBLOB_COL, TINYTEXT_COL, " +
+      "MEDIUMTEXT_COL, TEXT_COL, LONGTEXT_COL, ENUM_COL, SET_COL FROM " +
+      "my_table WHERE ID < 3 AND $CONDITIONS";
     String boundingQuery = "SELECT MIN(ID),MAX(ID) from my_table";
     String splitBy = "ID";
     ETLPlugin sourceConfig = new ETLPlugin(
@@ -128,12 +129,12 @@ public class MysqlSourceTestRun extends MysqlPluginTestBase {
     // Verify data
     Assert.assertEquals("user1", row1.get("NAME"));
     Assert.assertEquals("user2", row2.get("NAME"));
-    Assert.assertEquals("user1", row1.get("TEXT_COL"));
-    Assert.assertEquals("user2", row2.get("TEXT_COL"));
     Assert.assertEquals("user1", row1.get("TINYTEXT_COL"));
     Assert.assertEquals("user2", row2.get("TINYTEXT_COL"));
     Assert.assertEquals("user1", row1.get("MEDIUMTEXT_COL"));
     Assert.assertEquals("user2", row2.get("MEDIUMTEXT_COL"));
+    Assert.assertEquals("user1", row1.get("TEXT_COL"));
+    Assert.assertEquals("user2", row2.get("TEXT_COL"));
     Assert.assertEquals("user1", row1.get("LONGTEXT_COL"));
     Assert.assertEquals("user2", row2.get("LONGTEXT_COL"));
     Assert.assertEquals("char1", ((String) row1.get("CHAR_COL")).trim());
@@ -144,6 +145,8 @@ public class MysqlSourceTestRun extends MysqlPluginTestBase {
     Assert.assertEquals(true, row2.get("GRADUATED"));
     Assert.assertNull(row1.get("NOT_IMPORTED"));
     Assert.assertNull(row2.get("NOT_IMPORTED"));
+    Assert.assertEquals("Second", row1.get("ENUM_COL"));
+    Assert.assertEquals("a,b", row1.get("SET_COL"));
 
     Assert.assertEquals(1, (int) row1.get("TINY"));
     Assert.assertEquals(2, (int) row2.get("TINY"));
@@ -174,6 +177,7 @@ public class MysqlSourceTestRun extends MysqlPluginTestBase {
     Assert.assertEquals(expectedDate, row1.getDate("DATE_COL"));
     Assert.assertEquals(expectedTime, row1.getTime("TIME_COL"));
     Assert.assertEquals(expectedDate.getYear(), (int) row1.getDate("YEAR_COL").getYear());
+    Assert.assertEquals(expectedTs, row1.getTimestamp("DATETIME_COL", ZoneId.ofOffset("UTC", ZoneOffset.UTC)));
     Assert.assertEquals(expectedTs, row1.getTimestamp("TIMESTAMP_COL", ZoneId.ofOffset("UTC", ZoneOffset.UTC)));
 
     // verify binary columns
