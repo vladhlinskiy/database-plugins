@@ -141,6 +141,7 @@ public class MysqlPluginTestBase extends DatabasePluginTestBase {
                      "DATE_COL DATE, " +
                      "TIME_COL TIME, " +
                      "TIMESTAMP_COL TIMESTAMP(3), " +
+                     "DATETIME_COL DATETIME(3), " +
                      "YEAR_COL YEAR, " +
                      "TEXT_COL TEXT," +
                      "TINYTEXT_COL TINYTEXT," +
@@ -152,7 +153,9 @@ public class MysqlPluginTestBase extends DatabasePluginTestBase {
                      "TINYBLOB_COL TINYBLOB, " +
                      "BLOB_COL BLOB(100), " +
                      "MEDIUMBLOB_COL MEDIUMBLOB, " +
-                     "LONGBLOB_COL LONGBLOB " +
+                     "LONGBLOB_COL LONGBLOB, " +
+                     "ENUM_COL ENUM('First', 'Second', 'Third')," +
+                     "SET_COL SET('a', 'b', 'c', 'd')" +
                      ")");
       stmt.execute("CREATE TABLE MY_DEST_TABLE AS " +
                      "SELECT * FROM my_table");
@@ -168,12 +171,12 @@ public class MysqlPluginTestBase extends DatabasePluginTestBase {
         conn.prepareStatement("INSERT INTO my_table " +
                                 "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?," +
                                 "       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?," +
-                                "       ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                                "       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
       PreparedStatement pStmt2 =
         conn.prepareStatement("INSERT INTO your_table " +
                                 "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?," +
                                 "       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?," +
-                                "       ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
+                                "       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
 
       stmt.execute("insert into dbActionTest values (1, '1970-01-01')");
       stmt.execute("insert into postActionTest values (1, '1970-01-01')");
@@ -208,18 +211,21 @@ public class MysqlPluginTestBase extends DatabasePluginTestBase {
         pStmt.setDate(15, new Date(CURRENT_TS));
         pStmt.setTime(16, new Time(CURRENT_TS));
         pStmt.setTimestamp(17, new Timestamp(CURRENT_TS));
-        pStmt.setShort(18, (short) YEAR);
-        pStmt.setString(19, name);
+        pStmt.setTimestamp(18, new Timestamp(CURRENT_TS));
+        pStmt.setShort(19, (short) YEAR);
         pStmt.setString(20, name);
         pStmt.setString(21, name);
         pStmt.setString(22, name);
-        pStmt.setString(23, "char" + i);
-        pStmt.setBytes(24, name.getBytes(Charsets.UTF_8));
+        pStmt.setString(23, name);
+        pStmt.setString(24, "char" + i);
         pStmt.setBytes(25, name.getBytes(Charsets.UTF_8));
-        pStmt.setBlob(26, new SerialBlob(name.getBytes(Charsets.UTF_8)));
+        pStmt.setBytes(26, name.getBytes(Charsets.UTF_8));
         pStmt.setBlob(27, new SerialBlob(name.getBytes(Charsets.UTF_8)));
         pStmt.setBlob(28, new SerialBlob(name.getBytes(Charsets.UTF_8)));
         pStmt.setBlob(29, new SerialBlob(name.getBytes(Charsets.UTF_8)));
+        pStmt.setBlob(30, new SerialBlob(name.getBytes(Charsets.UTF_8)));
+        pStmt.setString(31, "Second");
+        pStmt.setString(32, "a,b");
         pStmt.executeUpdate();
       }
     }
