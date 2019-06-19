@@ -35,6 +35,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.DriverManager;
@@ -198,11 +199,11 @@ public class MysqlPluginTestBase extends DatabasePluginTestBase {
         pStmt.setLong(9, (long) i);
         pStmt.setFloat(10, (float) 123.45 + i);
         pStmt.setFloat(11, (float) 123.45 + i);
-        pStmt.setDouble(12, 123.45 + i);
+        pStmt.setBigDecimal(12, new BigDecimal(123.45 + i));
         if ((i % 2 == 0)) {
-          pStmt.setNull(13, Types.DOUBLE);
+          pStmt.setNull(13, Types.DECIMAL);
         } else {
-          pStmt.setDouble(13, 123.45 + i);
+          pStmt.setBigDecimal(13, new BigDecimal(123.45 + i));
         }
         pStmt.setBoolean(14, (i % 2 == 1));
         pStmt.setDate(15, new Date(CURRENT_TS));

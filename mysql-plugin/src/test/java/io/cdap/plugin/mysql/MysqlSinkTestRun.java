@@ -33,6 +33,8 @@ import io.cdap.plugin.db.batch.sink.AbstractDBSink;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.ResultSet;
@@ -163,7 +165,6 @@ public class MysqlSinkTestRun extends MysqlPluginTestBase {
       ZonedDateTime expectedTs = date.toInstant().atZone(ZoneId.ofOffset("UTC", ZoneOffset.UTC));
       Assert.assertEquals(expectedDate, row1.getDate("DATE_COL").toLocalDate());
       Assert.assertEquals(expectedTime, row1.getTime("TIME_COL").toLocalTime());
-      // TODO
       Assert.assertEquals(expectedDate.getYear(), row1.getInt("YEAR_COL"));
 
       Assert.assertEquals(expectedTs, row1.getTimestamp("DATETIME_COL").toInstant()
@@ -203,14 +204,14 @@ public class MysqlSinkTestRun extends MysqlPluginTestBase {
       Schema.Field.of("MEDIUMINT_COL", Schema.of(Schema.Type.INT)),
       Schema.Field.of("FLOAT_COL", Schema.of(Schema.Type.FLOAT)),
       Schema.Field.of("REAL_COL", Schema.of(Schema.Type.DOUBLE)),
-      Schema.Field.of("NUMERIC_COL", Schema.of(Schema.Type.DOUBLE)), // TODO
-      Schema.Field.of("DECIMAL_COL", Schema.of(Schema.Type.DOUBLE)), // TODO
+      Schema.Field.of("NUMERIC_COL", Schema.decimalOf(10, 6)),
+      Schema.Field.of("DECIMAL_COL", Schema.decimalOf(10, 6)),
       Schema.Field.of("BIT_COL", Schema.of(Schema.Type.BOOLEAN)),
       Schema.Field.of("DATE_COL", Schema.of(Schema.LogicalType.DATE)),
       Schema.Field.of("TIME_COL", Schema.of(Schema.LogicalType.TIME_MICROS)),
       Schema.Field.of("TIMESTAMP_COL", Schema.of(Schema.LogicalType.TIMESTAMP_MICROS)),
-      Schema.Field.of("DATETIME_COL", Schema.of(Schema.LogicalType.TIMESTAMP_MICROS)), // TODO
-      Schema.Field.of("YEAR_COL", Schema.of(Schema.LogicalType.DATE)), // TODO
+      Schema.Field.of("DATETIME_COL", Schema.of(Schema.LogicalType.TIMESTAMP_MICROS)),
+      Schema.Field.of("YEAR_COL", Schema.of(Schema.LogicalType.DATE)),
       Schema.Field.of("TEXT_COL", Schema.of(Schema.Type.STRING)),
       Schema.Field.of("TINYTEXT_COL", Schema.of(Schema.Type.STRING)),
       Schema.Field.of("MEDIUMTEXT_COL", Schema.of(Schema.Type.STRING)),
@@ -242,8 +243,8 @@ public class MysqlSinkTestRun extends MysqlPluginTestBase {
                          .set("MEDIUMINT_COL", 8388607)
                          .set("FLOAT_COL", 3.456f)
                          .set("REAL_COL", 3.457)
-                         .set("NUMERIC_COL", 3.458d)
-                         .set("DECIMAL_COL", 3.459d)
+                         .setDecimal("NUMERIC_COL", new BigDecimal(3.458d, new MathContext(10)).setScale(6))
+                         .setDecimal("DECIMAL_COL", new BigDecimal(3.459d, new MathContext(10)).setScale(6))
                          .set("BIT_COL", (i % 2 == 1))
                          .setDate("DATE_COL", localDateTime.toLocalDate())
                          .setTime("TIME_COL", localDateTime.toLocalTime())
