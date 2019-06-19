@@ -18,7 +18,6 @@ package io.cdap.plugin.mysql;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import io.cdap.cdap.api.common.Bytes;
 import io.cdap.cdap.api.data.format.StructuredRecord;
 import io.cdap.cdap.api.data.schema.Schema;
@@ -50,9 +49,7 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Test for ETL using databases.
@@ -80,28 +77,6 @@ public class MysqlSinkTestRun extends MysqlPluginTestBase {
     ApplicationManager appManager = deployETL(sourceConfig, sinkConfig, DATAPIPELINE_ARTIFACT, "testDBSink");
     createInputData(inputDatasetName);
     runETLOnce(appManager, ImmutableMap.of("logical.start.time", String.valueOf(CURRENT_TS)));
-
-    try (Connection conn = createConnection();
-         Statement stmt = conn.createStatement();
-         ResultSet resultSet = stmt.executeQuery("SELECT * FROM MY_DEST_TABLE")) {
-      Set<String> users = new HashSet<>();
-      Assert.assertTrue(resultSet.next());
-      users.add(resultSet.getString("NAME"));
-      Assert.assertEquals(new Date(CURRENT_TS).toString(), resultSet.getDate("DATE_COL").toString());
-      Assert.assertEquals(new Time(CURRENT_TS).toString(), resultSet.getTime("TIME_COL").toString());
-      Assert.assertEquals(new Timestamp(CURRENT_TS),
-                          resultSet.getTimestamp("TIMESTAMP_COL"));
-      Assert.assertEquals(new Timestamp(CURRENT_TS),
-                          resultSet.getTimestamp("DATETIME_COL"));
-      Assert.assertTrue(resultSet.next());
-      Assert.assertEquals("user2", Bytes.toString(resultSet.getBytes("BLOB_COL"), 0, 5));
-      Assert.assertEquals("user2", Bytes.toString(resultSet.getBytes("TINYBLOB_COL"), 0, 5));
-      Assert.assertEquals("user2", Bytes.toString(resultSet.getBytes("MEDIUMBLOB_COL"), 0, 5));
-      Assert.assertEquals("user2", Bytes.toString(resultSet.getBytes("LONGBLOB_COL"), 0, 5));
-      users.add(resultSet.getString("NAME"));
-      Assert.assertEquals(ImmutableSet.of("user1", "user2"), users);
-
-    }
 
     try (Connection conn = createConnection();
          Statement stmt1 = conn.createStatement();
