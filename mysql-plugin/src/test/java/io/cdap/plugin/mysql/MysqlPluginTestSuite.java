@@ -29,9 +29,9 @@ import org.junit.runners.Suite;
 @RunWith(TestSuite.class)
 @Suite.SuiteClasses({
   MysqlSinkTestRun.class,
-  MysqlSourceTestRun.class,
-  MysqlActionTestRun.class,
-  MysqlPostActionTestRun.class
+  MysqlSourceTestRun.class
+//  MysqlActionTestRun.class,
+//  MysqlPostActionTestRun.class
 })
 public class MysqlPluginTestSuite extends MysqlPluginTestBase {
 

@@ -17,7 +17,6 @@
 package io.cdap.plugin.mysql;
 
 import com.google.common.collect.ImmutableMap;
-import io.cdap.cdap.api.common.Bytes;
 import io.cdap.cdap.api.data.format.StructuredRecord;
 import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.cdap.api.dataset.table.Table;
@@ -43,25 +42,57 @@ import java.math.MathContext;
 import java.nio.ByteBuffer;
 import java.sql.Date;
 import java.sql.Time;
-import java.text.SimpleDateFormat;
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
+import java.sql.Timestamp;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static io.cdap.plugin.mysql.TestRecord.Column.BIG;
+import static io.cdap.plugin.mysql.TestRecord.Column.BINARY_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.BIT_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.BLOB_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.CHAR_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.DATETIME_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.DATE_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.ENUM_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.FLOAT_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.GRADUATED;
+import static io.cdap.plugin.mysql.TestRecord.Column.ID;
+import static io.cdap.plugin.mysql.TestRecord.Column.LONGBLOB_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.LONGTEXT_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.MEDIUMBLOB_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.MEDIUMINT_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.MEDIUMTEXT_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.NAME;
+import static io.cdap.plugin.mysql.TestRecord.Column.NOT_IMPORTED;
+import static io.cdap.plugin.mysql.TestRecord.Column.NUMERIC_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.REAL_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.SCORE;
+import static io.cdap.plugin.mysql.TestRecord.Column.SET_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.SMALL;
+import static io.cdap.plugin.mysql.TestRecord.Column.TEXT_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.TIMESTAMP_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.TIME_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.TINY;
+import static io.cdap.plugin.mysql.TestRecord.Column.TINYBLOB_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.TINYTEXT_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.VARBINARY_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.YEAR_COL;
 
 public class MysqlSourceTestRun extends MysqlPluginTestBase {
 
   @Test
   @SuppressWarnings("ConstantConditions")
   public void testDBMacroSupport() throws Exception {
-    String importQuery = "SELECT * FROM my_table WHERE DATE_COL <= '${logicalStartTime(yyyy-MM-dd,1d)}' " +
-      "AND $CONDITIONS";
-    String boundingQuery = "SELECT MIN(ID),MAX(ID) from my_table";
-    String splitBy = "ID";
+    String importQuery = "SELECT * FROM my_table WHERE " + DATE_COL.name() +
+      " <= '${logicalStartTime(yyyy-MM-dd,1d)}' AND $CONDITIONS";
+    String boundingQuery = "SELECT MIN(" + ID.name() + "),MAX(" + ID.name() + ") from my_table";
+    String splitBy = ID.name();
 
     ImmutableMap<String, String> sourceProps = ImmutableMap.<String, String>builder()
       .putAll(BASE_PROPS)
@@ -83,7 +114,7 @@ public class MysqlSourceTestRun extends MysqlPluginTestBase {
 
     ApplicationManager appManager = deployETL(sourceConfig, sinkConfig,
                                               DATAPIPELINE_ARTIFACT, "testDBMacro");
-    runETLOnce(appManager, ImmutableMap.of("logical.start.time", String.valueOf(CURRENT_TS)));
+    runETLOnce(appManager, ImmutableMap.of("logical.start.time", String.valueOf(System.currentTimeMillis())));
 
     DataSetManager<Table> outputManager = getDataset("macroOutputTable");
     Assert.assertTrue(MockSink.readOutput(outputManager).isEmpty());
@@ -92,13 +123,17 @@ public class MysqlSourceTestRun extends MysqlPluginTestBase {
   @Test
   @SuppressWarnings("ConstantConditions")
   public void testDBSource() throws Exception {
-    String importQuery = "SELECT ID, NAME, SCORE, GRADUATED, TINY, MEDIUMINT_COL, SMALL, BIG, FLOAT_COL, " +
-      "REAL_COL, NUMERIC_COL, CHAR_COL, DECIMAL_COL, BIT_COL, BINARY_COL, DATE_COL, TIME_COL, DATETIME_COL, " +
-      "TIMESTAMP_COL, VARBINARY_COL, BLOB_COL, MEDIUMBLOB_COL, TINYBLOB_COL, YEAR_COL, LONGBLOB_COL, TINYTEXT_COL, " +
-      "MEDIUMTEXT_COL, TEXT_COL, LONGTEXT_COL, ENUM_COL, SET_COL FROM " +
-      "my_table WHERE ID < 3 AND $CONDITIONS";
-    String boundingQuery = "SELECT MIN(ID),MAX(ID) from my_table";
-    String splitBy = "ID";
+
+    Set<TestRecord.Column> selectColumns =  new HashSet<>(Arrays.asList((TestRecord.Column.values())));
+    selectColumns.remove(NOT_IMPORTED);
+
+    String selectColumnsDef = selectColumns.stream()
+      .map(TestRecord.Column::name)
+      .collect(Collectors.joining(", "));
+
+    String importQuery = "SELECT " + selectColumnsDef + " FROM my_table WHERE " + ID.name() +  " < 3 AND $CONDITIONS";
+    String boundingQuery = "SELECT MIN(" + ID.name() + "),MAX(" + ID.name() + ") from my_table";
+    String splitBy = ID.name();
     ETLPlugin sourceConfig = new ETLPlugin(
       MysqlConstants.PLUGIN_NAME,
       BatchSource.PLUGIN_TYPE,
@@ -126,99 +161,93 @@ public class MysqlSourceTestRun extends MysqlPluginTestBase {
     List<StructuredRecord> outputRecords = MockSink.readOutput(outputManager);
 
     Assert.assertEquals(2, outputRecords.size());
-    String userid = outputRecords.get(0).get("NAME");
-    StructuredRecord row1 = "user1".equals(userid) ? outputRecords.get(0) : outputRecords.get(1);
-    StructuredRecord row2 = "user1".equals(userid) ? outputRecords.get(1) : outputRecords.get(0);
 
-    // Verify data
-    Assert.assertEquals("user1", row1.get("NAME"));
-    Assert.assertEquals("user2", row2.get("NAME"));
-    Assert.assertEquals("user1", row1.get("TINYTEXT_COL"));
-    Assert.assertEquals("user2", row2.get("TINYTEXT_COL"));
-    Assert.assertEquals("user1", row1.get("MEDIUMTEXT_COL"));
-    Assert.assertEquals("user2", row2.get("MEDIUMTEXT_COL"));
-    Assert.assertEquals("user1", row1.get("TEXT_COL"));
-    Assert.assertEquals("user2", row2.get("TEXT_COL"));
-    Assert.assertEquals("user1", row1.get("LONGTEXT_COL"));
-    Assert.assertEquals("user2", row2.get("LONGTEXT_COL"));
-    Assert.assertEquals("char1", ((String) row1.get("CHAR_COL")).trim());
-    Assert.assertEquals("char2", ((String) row2.get("CHAR_COL")).trim());
-    Assert.assertEquals(124.45, row1.get("SCORE"), 0.000001);
-    Assert.assertEquals(125.45, row2.get("SCORE"), 0.000001);
-    Assert.assertEquals(false, row1.get("GRADUATED"));
-    Assert.assertEquals(true, row2.get("GRADUATED"));
-    Assert.assertNull(row1.get("NOT_IMPORTED"));
-    Assert.assertNull(row2.get("NOT_IMPORTED"));
-    Assert.assertEquals("Second", row1.get("ENUM_COL"));
-    Assert.assertEquals("a,b", row1.get("SET_COL"));
+    Map<Integer, StructuredRecord> outputRecordsMap = outputRecords.stream()
+      .collect(Collectors.toMap(rec -> rec.<Integer>get(ID.name()), rec -> rec));
 
-    Assert.assertEquals(1, (int) row1.get("TINY"));
-    Assert.assertEquals(2, (int) row2.get("TINY"));
-    Assert.assertEquals(1, (int) row1.get("SMALL"));
-    Assert.assertEquals(2, (int) row2.get("SMALL"));
-    Assert.assertEquals(1, (long) row1.get("BIG"));
-    Assert.assertEquals(2, (long) row2.get("BIG"));
-    Assert.assertEquals(1, (int) row1.get("MEDIUMINT_COL"));
-    Assert.assertEquals(2, (int) row2.get("MEDIUMINT_COL"));
+    Stream.of(TEST_RECORDS).forEach(expected -> {
+      int expectedId = (int) expected.get(ID);
+      StructuredRecord actual = outputRecordsMap.get(expectedId);
 
-    Assert.assertEquals(124.45, (float) row1.get("FLOAT_COL"), 0.00001);
-    Assert.assertEquals(125.45, (float) row2.get("FLOAT_COL"), 0.00001);
-    Assert.assertEquals(124.45, (double) row1.get("REAL_COL"), 0.00001);
-    Assert.assertEquals(125.45, (double) row2.get("REAL_COL"), 0.00001);
+      Assert.assertNotNull("Output records don't contain record with ID: " + expectedId, actual);
 
-    // TODO seems there is a bug in StructuredRecord#getDecimal. ReferenceBatchSink#transform method receives
-    // an instance of StructuredRecord where decimal field value serialized as java.nio.HeapBuffer, but
-    // StructuredRecord#getDecimal implementation assumes field value to be raw bytes array.
+      // Verify data
+      Assert.assertEquals(expected.get(NAME), actual.get(NAME.name()));
+      Assert.assertEquals(expected.get(TINYTEXT_COL), actual.get(TINYTEXT_COL.name()));
+      Assert.assertEquals(expected.get(MEDIUMTEXT_COL), actual.get(MEDIUMTEXT_COL.name()));
+      Assert.assertEquals(expected.get(TEXT_COL), actual.get(TEXT_COL.name()));
+      Assert.assertEquals(expected.get(LONGTEXT_COL), actual.get(LONGTEXT_COL.name()));
+      Assert.assertEquals(expected.get(CHAR_COL), actual.get(CHAR_COL.name()));
+      Assert.assertEquals(expected.get(SCORE), actual.get(SCORE.name()));
+      Assert.assertEquals(expected.get(GRADUATED), actual.get(GRADUATED.name()));
+      Assert.assertNull(actual.get(NOT_IMPORTED.name()));
+      Assert.assertEquals(expected.get(ENUM_COL), actual.get(ENUM_COL.name()));
+      Assert.assertEquals(expected.get(SET_COL), actual.get(SET_COL.name()));
+      Assert.assertEquals(expected.get(TINY), actual.get(TINY.name()));
+      Assert.assertEquals(expected.get(SMALL), actual.get(SMALL.name()));
+      Assert.assertEquals(expected.get(BIG), actual.get(BIG.name()));
+      Assert.assertEquals(expected.get(MEDIUMINT_COL), actual.get(MEDIUMINT_COL.name()));
+      Assert.assertEquals((float) expected.get(FLOAT_COL), (float) actual.get(FLOAT_COL.name()), 0.001);
+      Assert.assertEquals((double) expected.get(REAL_COL), (double) actual.get(REAL_COL.name()), 0.001);
+      Assert.assertEquals(expected.get(BIT_COL), actual.get(BIT_COL.name()));
 
-    // This actually copies logic of StructuredRecord#getLogicalTypeSchema private method.
-    Schema numericColSchema = row1.getSchema().getField("NUMERIC_COL").getSchema();
-    Schema logicalTypeSchema = null;
-    for (Schema schema : numericColSchema.getUnionSchemas()) {
-      Schema.LogicalType logicalType = schema.getLogicalType();
-      if (logicalType != null && logicalType == Schema.LogicalType.DECIMAL) {
-        logicalTypeSchema = schema;
+      // Verify time columns
+      Assert.assertEquals(((Date) expected.get(DATE_COL)).toLocalDate(), actual.getDate(DATE_COL.name()));
+      Assert.assertEquals(((Time) expected.get(TIME_COL)).toLocalTime(), actual.getTime(TIME_COL.name()));
+      Assert.assertEquals(expected.get(YEAR_COL), (short) actual.getDate(YEAR_COL.name()).getYear());
+      Assert.assertEquals(((Timestamp) expected.get(DATETIME_COL)).toLocalDateTime(),
+                          actual.getTimestamp(DATETIME_COL.name()).toLocalDateTime());
+      Assert.assertEquals(((Timestamp) expected.get(TIMESTAMP_COL)).toLocalDateTime(),
+                          actual.getTimestamp(TIMESTAMP_COL.name()).toLocalDateTime());
+
+      // verify binary columns
+      String expectedBinaryString = new String((byte[]) expected.get(BINARY_COL)).trim();
+      String binaryActual = new String(((ByteBuffer) actual.get(BINARY_COL.name())).array()).trim();
+      Assert.assertEquals(expectedBinaryString, binaryActual);
+
+      String expectedVarbinaryString = new String((byte[]) expected.get(VARBINARY_COL)).trim();
+      String varbinaryActual = new String(((ByteBuffer) actual.get(VARBINARY_COL.name())).array()).trim();
+      Assert.assertEquals(expectedVarbinaryString, varbinaryActual);
+
+      String blobActual = new String(((ByteBuffer) actual.get(BLOB_COL.name())).array()).trim();
+      Assert.assertEquals(expected.get(BLOB_COL), blobActual);
+
+      String mediumBlobActual = new String(((ByteBuffer) actual.get(MEDIUMBLOB_COL.name())).array()).trim();
+      Assert.assertEquals(expected.get(MEDIUMBLOB_COL), mediumBlobActual);
+
+      String tinyBlobActual = new String(((ByteBuffer) actual.get(TINYBLOB_COL.name())).array()).trim();
+      Assert.assertEquals(expected.get(TINYBLOB_COL), tinyBlobActual);
+
+      String longBlobActual = new String(((ByteBuffer) actual.get(LONGBLOB_COL.name())).array()).trim();
+      Assert.assertEquals(expected.get(LONGBLOB_COL), longBlobActual);
+
+      // TODO seems there is a bug in StructuredRecord#getDecimal. ReferenceBatchSink#transform method receives
+      // an instance of StructuredRecord where decimal field value serialized as java.nio.HeapBuffer, but
+      // StructuredRecord#getDecimal implementation assumes field value to be raw bytes array.
+
+      // This actually copies logic of StructuredRecord#getLogicalTypeSchema private method.
+      Schema numericColSchema = actual.getSchema().getField(NUMERIC_COL.name()).getSchema();
+      Schema logicalTypeSchema = null;
+      for (Schema schema : numericColSchema.getUnionSchemas()) {
+        Schema.LogicalType logicalType = schema.getLogicalType();
+        if (logicalType != null && logicalType == Schema.LogicalType.DECIMAL) {
+          logicalTypeSchema = schema;
+        }
       }
-    }
 
-    ByteBuffer numericRawValue = row1.get("NUMERIC_COL");
-    BigDecimal actualNumeric = new BigDecimal(new BigInteger(numericRawValue.array()), logicalTypeSchema.getScale(),
-                                              new MathContext(logicalTypeSchema.getPrecision()));
-    Assert.assertEquals(124.45, actualNumeric.doubleValue(), 0.000001);
-
-    Assert.assertTrue((boolean) row1.get("BIT_COL"));
-    Assert.assertFalse((boolean) row2.get("BIT_COL"));
-    // Verify time columns
-    java.util.Date date = new java.util.Date(CURRENT_TS);
-    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-    LocalDate expectedDate = Date.valueOf(sdf.format(date)).toLocalDate();
-    sdf = new SimpleDateFormat("H:mm:ss");
-    LocalTime expectedTime = Time.valueOf(sdf.format(date)).toLocalTime();
-    ZonedDateTime expectedTs = date.toInstant().atZone(ZoneId.ofOffset("UTC", ZoneOffset.UTC));
-    Assert.assertEquals(expectedDate, row1.getDate("DATE_COL"));
-    Assert.assertEquals(expectedTime, row1.getTime("TIME_COL"));
-    Assert.assertEquals(expectedDate.getYear(), (int) row1.getDate("YEAR_COL").getYear());
-    Assert.assertEquals(expectedTs, row1.getTimestamp("DATETIME_COL", ZoneId.ofOffset("UTC", ZoneOffset.UTC)));
-    Assert.assertEquals(expectedTs, row1.getTimestamp("TIMESTAMP_COL", ZoneId.ofOffset("UTC", ZoneOffset.UTC)));
-
-    // verify binary columns
-    Assert.assertEquals("user1", Bytes.toString(((ByteBuffer) row1.get("BINARY_COL")).array(), 0, 5));
-    Assert.assertEquals("user2", Bytes.toString(((ByteBuffer) row2.get("BINARY_COL")).array(), 0, 5));
-    Assert.assertEquals("user1", Bytes.toString(((ByteBuffer) row1.get("VARBINARY_COL")).array(), 0, 5));
-    Assert.assertEquals("user2", Bytes.toString(((ByteBuffer) row2.get("VARBINARY_COL")).array(), 0, 5));
-    Assert.assertEquals("user1", Bytes.toString(((ByteBuffer) row1.get("BLOB_COL")).array(), 0, 5));
-    Assert.assertEquals("user2", Bytes.toString(((ByteBuffer) row2.get("BLOB_COL")).array(), 0, 5));
-    Assert.assertEquals("user1", Bytes.toString(((ByteBuffer) row1.get("MEDIUMBLOB_COL")).array(), 0, 5));
-    Assert.assertEquals("user2", Bytes.toString(((ByteBuffer) row2.get("MEDIUMBLOB_COL")).array(), 0, 5));
-    Assert.assertEquals("user1", Bytes.toString(((ByteBuffer) row1.get("TINYBLOB_COL")).array(), 0, 5));
-    Assert.assertEquals("user2", Bytes.toString(((ByteBuffer) row2.get("TINYBLOB_COL")).array(), 0, 5));
-    Assert.assertEquals("user1", Bytes.toString(((ByteBuffer) row1.get("LONGBLOB_COL")).array(), 0, 5));
-    Assert.assertEquals("user2", Bytes.toString(((ByteBuffer) row2.get("LONGBLOB_COL")).array(), 0, 5));
+      ByteBuffer numericRawValue = actual.get(NUMERIC_COL.name());
+      BigDecimal actualNumeric = new BigDecimal(new BigInteger(numericRawValue.array()), logicalTypeSchema.getScale(),
+                                                new MathContext(logicalTypeSchema.getPrecision()));
+      BigDecimal expectedNumeric = (BigDecimal) expected.get(NUMERIC_COL);
+      Assert.assertEquals(expectedNumeric.doubleValue(), actualNumeric.doubleValue(), 0.000001);
+    });
   }
 
   @Test
   public void testDbSourceMultipleTables() throws Exception {
     String importQuery = "SELECT my_table.ID, your_table.NAME FROM my_table, your_table " +
       "WHERE my_table.ID < 3 and my_table.ID = your_table.ID and $CONDITIONS ";
+
     String boundingQuery = "SELECT LEAST(MIN(my_table.ID), MIN(your_table.ID)), " +
       "GREATEST(MAX(my_table.ID), MAX(your_table.ID))";
     String splitBy = "my_table.ID";
@@ -249,14 +278,15 @@ public class MysqlSourceTestRun extends MysqlPluginTestBase {
     DataSetManager<Table> outputManager = getDataset(outputDatasetName);
     List<StructuredRecord> outputRecords = MockSink.readOutput(outputManager);
     Assert.assertEquals(2, outputRecords.size());
-    String userid = outputRecords.get(0).get("NAME");
-    StructuredRecord row1 = "user1".equals(userid) ? outputRecords.get(0) : outputRecords.get(1);
-    StructuredRecord row2 = "user1".equals(userid) ? outputRecords.get(1) : outputRecords.get(0);
-    // Verify data
-    Assert.assertEquals("user1", row1.get("NAME"));
-    Assert.assertEquals("user2", row2.get("NAME"));
-    Assert.assertEquals(1, row1.<Integer>get("ID").intValue());
-    Assert.assertEquals(2, row2.<Integer>get("ID").intValue());
+    Map<Integer, StructuredRecord> outputRecordsMap = outputRecords.stream()
+      .collect(Collectors.toMap(rec -> rec.<Integer>get(ID.name()), rec -> rec));
+
+    Stream.of(TEST_RECORDS).forEach(expected -> {
+      int expectedId = (int) expected.get(ID);
+      StructuredRecord actual = outputRecordsMap.get(expectedId);
+      Assert.assertNotNull("Output records don't contain record with ID: " + expectedId, actual);
+      Assert.assertEquals(expected.get(NAME), actual.get(NAME.name()));
+    });
   }
 
   @Test

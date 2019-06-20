@@ -36,6 +36,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.DriverManager;
@@ -44,33 +45,102 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
-import java.sql.Types;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Map;
 import java.util.TimeZone;
-import javax.sql.rowset.serial.SerialBlob;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static io.cdap.plugin.mysql.TestRecord.Column.BIG;
+import static io.cdap.plugin.mysql.TestRecord.Column.BINARY_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.BIT_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.BLOB_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.CHAR_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.DATETIME_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.DATE_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.DECIMAL_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.ENUM_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.FLOAT_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.GRADUATED;
+import static io.cdap.plugin.mysql.TestRecord.Column.ID;
+import static io.cdap.plugin.mysql.TestRecord.Column.LONGBLOB_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.LONGTEXT_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.MEDIUMBLOB_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.MEDIUMINT_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.MEDIUMTEXT_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.NAME;
+import static io.cdap.plugin.mysql.TestRecord.Column.NOT_IMPORTED;
+import static io.cdap.plugin.mysql.TestRecord.Column.NUMERIC_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.REAL_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.SCORE;
+import static io.cdap.plugin.mysql.TestRecord.Column.SET_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.SMALL;
+import static io.cdap.plugin.mysql.TestRecord.Column.TEXT_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.TIMESTAMP_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.TIME_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.TINY;
+import static io.cdap.plugin.mysql.TestRecord.Column.TINYBLOB_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.TINYTEXT_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.VARBINARY_COL;
+import static io.cdap.plugin.mysql.TestRecord.Column.YEAR_COL;
 
 public class MysqlPluginTestBase extends DatabasePluginTestBase {
   protected static final ArtifactId DATAPIPELINE_ARTIFACT_ID = NamespaceId.DEFAULT.artifact("data-pipeline", "3.2.0");
   protected static final ArtifactSummary DATAPIPELINE_ARTIFACT = new ArtifactSummary("data-pipeline", "3.2.0");
-  protected static final long CURRENT_TS = System.currentTimeMillis();
   protected static final String DRIVER_CLASS = "com.mysql.jdbc.Driver";
   protected static final String JDBC_DRIVER_NAME = "mysql";
 
   protected static String connectionUrl;
-  protected static final int YEAR;
   protected static boolean tearDown = true;
   private static int startCount;
 
+  protected static final TestRecord FIRST_RECORD = TestRecord.newRecord()
+    .set(ID, 1)
+    .set(TestRecord.Column.NAME, "some name")
+    .set(SCORE, 123.45)
+    .set(GRADUATED, true)
+    .set(NOT_IMPORTED, "some record")
+    .set(TINY, 10)
+    .set(SMALL, 10)
+    .set(BIG, 15121L)
+    .set(MEDIUMINT_COL, 1515135)
+    .set(FLOAT_COL, 123.451f)
+    .set(REAL_COL, 123.454d)
+    .set(NUMERIC_COL, new BigDecimal(123.451, new MathContext(10)).setScale(6))
+    .set(DECIMAL_COL, new BigDecimal(123.451, new MathContext(10)).setScale(6))
+    .set(BIT_COL, true)
+    .set(DATE_COL, new Date(System.currentTimeMillis()))
+    .set(TIME_COL, new Time(System.currentTimeMillis()))
+    .set(TIMESTAMP_COL, new Timestamp(System.currentTimeMillis()))
+    .set(DATETIME_COL, new Timestamp(System.currentTimeMillis()))
+    .set(YEAR_COL, (short) Calendar.getInstance().get(Calendar.YEAR))
+    .set(TEXT_COL, "some record")
+    .set(TINYTEXT_COL, "some record")
+    .set(MEDIUMTEXT_COL, "some record")
+    .set(LONGTEXT_COL, "some record")
+    .set(CHAR_COL, "some record")
+    .set(BINARY_COL, "some record".getBytes(Charsets.UTF_8))
+    .set(VARBINARY_COL, "some record".getBytes(Charsets.UTF_8))
+    .set(TINYBLOB_COL, "some record")
+    .set(BLOB_COL, "some record")
+    .set(MEDIUMBLOB_COL, "some record")
+    .set(LONGBLOB_COL, "some record")
+    .set(ENUM_COL, "Second")
+    .set(SET_COL, "a,b");
+
+  protected static final TestRecord SECOND_RECORD = TestRecord.copyOf(FIRST_RECORD)
+    .set(ID, 2)
+    .set(GRADUATED, false)
+    .set(BIT_COL, false);
+
+  protected static final TestRecord[] TEST_RECORDS = {
+    FIRST_RECORD,
+    SECOND_RECORD
+  };
+
   @ClassRule
   public static final TestConfiguration CONFIG = new TestConfiguration("explore.enabled", false);
-
-  static {
-    Calendar calendar = Calendar.getInstance();
-    calendar.setTime(new Date(CURRENT_TS));
-    YEAR = calendar.get(Calendar.YEAR);
-  }
 
   protected static final Map<String, String> BASE_PROPS = ImmutableMap.<String, String>builder()
     .put(ConnectionConfig.HOST, System.getProperty("mysql.host"))
@@ -120,61 +190,25 @@ public class MysqlPluginTestBase extends DatabasePluginTestBase {
       // create a table that the action will truncate at the end of the run
       stmt.execute("CREATE TABLE postActionTest (x int, day varchar(10))");
 
-      stmt.execute("CREATE TABLE my_table" +
-                     "(" +
-                     "ID INT NOT NULL, " +
-                     "NAME VARCHAR(40) NOT NULL, " +
-                     "SCORE DOUBLE, " +
-                     "GRADUATED BOOLEAN, " +
-                     "NOT_IMPORTED VARCHAR(30), " +
-                     "TINY TINYINT, " +
-                     "SMALL SMALLINT, " +
-                     "MEDIUMINT_COL MEDIUMINT, " +
-                     "BIG BIGINT, " +
-                     "FLOAT_COL FLOAT, " +
-                     "REAL_COL REAL, " +
-                     "NUMERIC_COL NUMERIC(10, 6), " +
-                     "DECIMAL_COL DECIMAL(10, 6), " +
-                     "BIT_COL BIT, " +
-                     "DATE_COL DATE, " +
-                     "TIME_COL TIME, " +
-                     "TIMESTAMP_COL TIMESTAMP(3), " +
-                     "DATETIME_COL DATETIME(3), " +
-                     "YEAR_COL YEAR, " +
-                     "TEXT_COL TEXT," +
-                     "TINYTEXT_COL TINYTEXT," +
-                     "MEDIUMTEXT_COL MEDIUMTEXT," +
-                     "LONGTEXT_COL LONGTEXT," +
-                     "CHAR_COL CHAR(100)," +
-                     "BINARY_COL BINARY(100)," +
-                     "VARBINARY_COL VARBINARY(20)," +
-                     "TINYBLOB_COL TINYBLOB, " +
-                     "BLOB_COL BLOB(100), " +
-                     "MEDIUMBLOB_COL MEDIUMBLOB, " +
-                     "LONGBLOB_COL LONGBLOB, " +
-                     "ENUM_COL ENUM('First', 'Second', 'Third')," +
-                     "SET_COL SET('a', 'b', 'c', 'd')" +
-                     ")");
-      stmt.execute("CREATE TABLE MY_DEST_TABLE AS " +
-                     "SELECT * FROM my_table");
-      stmt.execute("CREATE TABLE your_table AS " +
-                     "SELECT * FROM my_table");
+      String columnsDefinition = Stream.of(TestRecord.Column.values())
+        .map(column -> String.format("%s %s", column.name(), column.sqlType()))
+        .collect(Collectors.joining(", "));
+
+      stmt.execute("CREATE TABLE my_table (" + columnsDefinition + ")");
+      stmt.execute("CREATE TABLE MY_DEST_TABLE AS SELECT * FROM my_table");
+      stmt.execute("CREATE TABLE your_table AS SELECT * FROM my_table");
     }
   }
 
   protected static void prepareTestData(Connection conn) throws SQLException {
+    String placeholders = Stream.of(TestRecord.Column.values())
+      .map(column -> "?")
+      .collect(Collectors.joining(", "));
+
     try (
       Statement stmt = conn.createStatement();
-      PreparedStatement pStmt1 =
-        conn.prepareStatement("INSERT INTO my_table " +
-                                "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?," +
-                                "       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?," +
-                                "       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-      PreparedStatement pStmt2 =
-        conn.prepareStatement("INSERT INTO your_table " +
-                                "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?," +
-                                "       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?," +
-                                "       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
+      PreparedStatement pStmt1 = conn.prepareStatement("INSERT INTO my_table VALUES(" + placeholders + ")");
+      PreparedStatement pStmt2 = conn.prepareStatement("INSERT INTO your_table VALUES(" + placeholders + ")")) {
 
       stmt.execute("insert into dbActionTest values (1, '1970-01-01')");
       stmt.execute("insert into postActionTest values (1, '1970-01-01')");
@@ -184,46 +218,42 @@ public class MysqlPluginTestBase extends DatabasePluginTestBase {
   }
 
   private static void populateData(PreparedStatement ...stmts) throws SQLException {
-    // insert the same data into both tables: my_table and your_table
+    // insert the same record into both tables: my_table and your_table
     for (PreparedStatement pStmt : stmts) {
-      for (int i = 1; i <= 5; i++) {
-        String name = "user" + i;
-        pStmt.setInt(1, i);
-        pStmt.setString(2, name);
-        pStmt.setDouble(3, 123.45 + i);
-        pStmt.setBoolean(4, (i % 2 == 0));
-        pStmt.setString(5, "random" + i);
-        pStmt.setShort(6, (short) i);
-        pStmt.setShort(7, (short) i);
-        pStmt.setInt(8, (short) i);
-        pStmt.setLong(9, (long) i);
-        pStmt.setFloat(10, (float) 123.45 + i);
-        pStmt.setFloat(11, (float) 123.45 + i);
-        pStmt.setBigDecimal(12, new BigDecimal(123.45 + i));
-        if ((i % 2 == 0)) {
-          pStmt.setNull(13, Types.DECIMAL);
-        } else {
-          pStmt.setBigDecimal(13, new BigDecimal(123.45 + i));
-        }
-        pStmt.setBoolean(14, (i % 2 == 1));
-        pStmt.setDate(15, new Date(CURRENT_TS));
-        pStmt.setTime(16, new Time(CURRENT_TS));
-        pStmt.setTimestamp(17, new Timestamp(CURRENT_TS));
-        pStmt.setTimestamp(18, new Timestamp(CURRENT_TS));
-        pStmt.setShort(19, (short) YEAR);
-        pStmt.setString(20, name);
-        pStmt.setString(21, name);
-        pStmt.setString(22, name);
-        pStmt.setString(23, name);
-        pStmt.setString(24, "char" + i);
-        pStmt.setBytes(25, name.getBytes(Charsets.UTF_8));
-        pStmt.setBytes(26, name.getBytes(Charsets.UTF_8));
-        pStmt.setBlob(27, new SerialBlob(name.getBytes(Charsets.UTF_8)));
-        pStmt.setBlob(28, new SerialBlob(name.getBytes(Charsets.UTF_8)));
-        pStmt.setBlob(29, new SerialBlob(name.getBytes(Charsets.UTF_8)));
-        pStmt.setBlob(30, new SerialBlob(name.getBytes(Charsets.UTF_8)));
-        pStmt.setString(31, "Second");
-        pStmt.setString(32, "a,b");
+      for (TestRecord record : TEST_RECORDS) {
+        pStmt.setInt(ID.index(), (int) record.get(ID));
+        pStmt.setString(NAME.index(), (String) record.get(NAME));
+        pStmt.setDouble(SCORE.index(), (double) record.get(SCORE));
+        pStmt.setBoolean(GRADUATED.index(), (boolean) record.get(GRADUATED));
+        pStmt.setString(NOT_IMPORTED.index(), (String) record.get(NOT_IMPORTED));
+        pStmt.setInt(TINY.index(), (int) record.get(TINY));
+        pStmt.setInt(SMALL.index(), (int) record.get(SMALL));
+        pStmt.setInt(MEDIUMINT_COL.index(), (int) record.get(MEDIUMINT_COL));
+        pStmt.setLong(BIG.index(), (long) record.get(BIG));
+        pStmt.setFloat(FLOAT_COL.index(), (float) record.get(FLOAT_COL));
+        pStmt.setDouble(REAL_COL.index(), (double) record.get(REAL_COL));
+        pStmt.setBigDecimal(NUMERIC_COL.index(), (BigDecimal) record.get(NUMERIC_COL));
+        pStmt.setBigDecimal(DECIMAL_COL.index(), (BigDecimal) record.get(DECIMAL_COL));
+        pStmt.setBoolean(BIT_COL.index(), (boolean) record.get(BIT_COL));
+        pStmt.setDate(DATE_COL.index(), (Date) record.get(DATE_COL));
+        pStmt.setTime(TIME_COL.index(), (Time) record.get(TIME_COL));
+        pStmt.setTimestamp(TIMESTAMP_COL.index(), (Timestamp) record.get(TIMESTAMP_COL));
+        pStmt.setTimestamp(DATETIME_COL.index(), (Timestamp) record.get(DATETIME_COL));
+        pStmt.setShort(YEAR_COL.index(), (short) record.get(YEAR_COL));
+        pStmt.setString(TEXT_COL.index(), (String) record.get(TEXT_COL));
+        pStmt.setString(TINYTEXT_COL.index(), (String) record.get(TINYTEXT_COL));
+        pStmt.setString(MEDIUMTEXT_COL.index(), (String) record.get(MEDIUMTEXT_COL));
+        pStmt.setString(LONGTEXT_COL.index(), (String) record.get(LONGTEXT_COL));
+        pStmt.setString(CHAR_COL.index(), (String) record.get(CHAR_COL));
+        pStmt.setBytes(BINARY_COL.index(), (byte[]) record.get(BINARY_COL));
+        pStmt.setBytes(VARBINARY_COL.index(), (byte[]) record.get(VARBINARY_COL));
+        pStmt.setBlob(TINYBLOB_COL.index(), record.getBlobOf(TINYBLOB_COL));
+        pStmt.setBlob(BLOB_COL.index(), record.getBlobOf(BLOB_COL));
+        pStmt.setBlob(MEDIUMBLOB_COL.index(), record.getBlobOf(MEDIUMBLOB_COL));
+        pStmt.setBlob(LONGBLOB_COL.index(), record.getBlobOf(LONGBLOB_COL));
+        pStmt.setString(ENUM_COL.index(), (String) record.get(ENUM_COL));
+        pStmt.setString(SET_COL.index(), (String) record.get(SET_COL));
+
         pStmt.executeUpdate();
       }
     }
