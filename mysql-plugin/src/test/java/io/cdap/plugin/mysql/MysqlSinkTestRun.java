@@ -89,10 +89,21 @@ public class MysqlSinkTestRun extends MysqlPluginTestBase {
   );
 
   @Test
-  public void testDBSink() throws Exception {
-    String inputDatasetName = "input-dbsinktest";
+  public void testDBSinkWithExplicitInputSchema() throws Exception {
+    testDBSink(true);
+  }
 
-    ETLPlugin sourceConfig = MockSource.getPlugin(inputDatasetName, SCHEMA);
+  @Test
+  public void testDBSinkWithInferredInputSchema() throws Exception {
+    testDBSink(false);
+  }
+
+  private void testDBSink(boolean setInputSchema) throws Exception {
+    String inputDatasetName = "input-dbsinktest";
+    ETLPlugin sourceConfig = (setInputSchema)
+      ? MockSource.getPlugin(inputDatasetName, SCHEMA)
+      : MockSource.getPlugin(inputDatasetName);
+
     ETLPlugin sinkConfig = new ETLPlugin(
       MysqlConstants.PLUGIN_NAME,
       BatchSink.PLUGIN_TYPE,
