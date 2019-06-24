@@ -30,6 +30,7 @@ import io.cdap.cdap.test.DataSetManager;
 import io.cdap.plugin.common.Constants;
 import io.cdap.plugin.db.batch.sink.AbstractDBSink;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.sql.Connection;
@@ -88,18 +89,24 @@ public class MysqlSinkTestRun extends MysqlPluginTestBase {
     Schema.Field.of("SET_COL", Schema.of(Schema.Type.STRING))
   );
 
+  @Before
+  public void setup() throws Exception {
+    try (Statement stmt = createConnection().createStatement()) {
+      stmt.execute("TRUNCATE TABLE MY_DEST_TABLE");
+    }
+  }
+
   @Test
   public void testDBSinkWithExplicitInputSchema() throws Exception {
-    testDBSink(true);
+    testDBSink("testDBSinkWithExplicitInputSchema", "input-dbsinktest-explicit", true);
   }
 
   @Test
   public void testDBSinkWithInferredInputSchema() throws Exception {
-    testDBSink(false);
+    testDBSink("testDBSinkWithInferredInputSchema", "input-dbsinktest-inferred", false);
   }
 
-  private void testDBSink(boolean setInputSchema) throws Exception {
-    String inputDatasetName = "input-dbsinktest";
+  private void testDBSink(String appName, String inputDatasetName, boolean setInputSchema) throws Exception {
     ETLPlugin sourceConfig = (setInputSchema)
       ? MockSource.getPlugin(inputDatasetName, SCHEMA)
       : MockSource.getPlugin(inputDatasetName);
@@ -117,7 +124,7 @@ public class MysqlSinkTestRun extends MysqlPluginTestBase {
         .build(),
       null);
 
-    ApplicationManager appManager = deployETL(sourceConfig, sinkConfig, DATAPIPELINE_ARTIFACT, "testDBSink");
+    ApplicationManager appManager = deployETL(sourceConfig, sinkConfig, DATAPIPELINE_ARTIFACT, appName);
     createInputData(inputDatasetName);
     runETLOnce(appManager, ImmutableMap.of("logical.start.time", String.valueOf(CURRENT_TS)));
 
