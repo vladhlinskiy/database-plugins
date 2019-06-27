@@ -44,8 +44,6 @@ import java.sql.Time;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -178,12 +176,12 @@ public class MysqlSourceTestRun extends MysqlPluginTestBase {
     LocalDate expectedDate = Date.valueOf(sdf.format(date)).toLocalDate();
     sdf = new SimpleDateFormat("H:mm:ss");
     LocalTime expectedTime = Time.valueOf(sdf.format(date)).toLocalTime();
-    ZonedDateTime expectedTs = date.toInstant().atZone(ZoneId.ofOffset("UTC", ZoneOffset.UTC));
+    ZonedDateTime expectedTs = date.toInstant().atZone(UTC_ZONE);
     Assert.assertEquals(expectedDate, row1.getDate("DATE_COL"));
     Assert.assertEquals(expectedTime, row1.getTime("TIME_COL"));
     Assert.assertEquals(expectedDate.getYear(), (int) row1.getDate("YEAR_COL").getYear());
-    Assert.assertEquals(expectedTs, row1.getTimestamp("DATETIME_COL", ZoneId.ofOffset("UTC", ZoneOffset.UTC)));
-    Assert.assertEquals(expectedTs, row1.getTimestamp("TIMESTAMP_COL", ZoneId.ofOffset("UTC", ZoneOffset.UTC)));
+    Assert.assertEquals(expectedTs, row1.getTimestamp("DATETIME_COL", UTC_ZONE));
+    Assert.assertEquals(expectedTs, row1.getTimestamp("TIMESTAMP_COL", UTC_ZONE));
 
     // verify binary columns
     Assert.assertEquals("user1", Bytes.toString(((ByteBuffer) row1.get("BINARY_COL")).array(), 0, 5));
