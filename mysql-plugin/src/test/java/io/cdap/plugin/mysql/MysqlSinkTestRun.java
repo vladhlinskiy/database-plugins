@@ -33,6 +33,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.ResultSet;
@@ -66,8 +68,8 @@ public class MysqlSinkTestRun extends MysqlPluginTestBase {
     Schema.Field.of("MEDIUMINT_COL", Schema.of(Schema.Type.INT)),
     Schema.Field.of("FLOAT_COL", Schema.of(Schema.Type.FLOAT)),
     Schema.Field.of("REAL_COL", Schema.of(Schema.Type.DOUBLE)),
-    Schema.Field.of("NUMERIC_COL", Schema.of(Schema.Type.DOUBLE)),
-    Schema.Field.of("DECIMAL_COL", Schema.of(Schema.Type.DOUBLE)),
+    Schema.Field.of("NUMERIC_COL", Schema.decimalOf(PRECISION, SCALE)),
+    Schema.Field.of("DECIMAL_COL", Schema.decimalOf(PRECISION, SCALE)),
     Schema.Field.of("BIT_COL", Schema.of(Schema.Type.BOOLEAN)),
     Schema.Field.of("DATE_COL", Schema.of(Schema.LogicalType.DATE)),
     Schema.Field.of("TIME_COL", Schema.of(Schema.LogicalType.TIME_MICROS)),
@@ -175,10 +177,16 @@ public class MysqlSinkTestRun extends MysqlPluginTestBase {
       Assert.assertEquals(3.456f, row2.getFloat("FLOAT_COL"), 0.00001);
       Assert.assertEquals(3.457, row1.getDouble("REAL_COL"), 0.00001);
       Assert.assertEquals(3.457, row2.getDouble("REAL_COL"), 0.00001);
-      Assert.assertEquals(3.458, row1.getDouble("NUMERIC_COL"), 0.000001);
-      Assert.assertEquals(3.458, row2.getDouble("NUMERIC_COL"), 0.000001);
-      Assert.assertEquals(3.459, row1.getDouble("DECIMAL_COL"), 0.000001);
-      Assert.assertEquals(3.459, row2.getDouble("DECIMAL_COL"), 0.000001);
+
+      Assert.assertEquals(new BigDecimal(3.458, new MathContext(PRECISION)).setScale(SCALE),
+                          row1.getBigDecimal("NUMERIC_COL"));
+      Assert.assertEquals(new BigDecimal(3.458, new MathContext(PRECISION)).setScale(SCALE),
+                          row2.getBigDecimal("NUMERIC_COL"));
+      Assert.assertEquals(new BigDecimal(3.459, new MathContext(PRECISION)).setScale(SCALE),
+                          row1.getBigDecimal("DECIMAL_COL"));
+      Assert.assertEquals(new BigDecimal(3.459, new MathContext(PRECISION)).setScale(SCALE),
+                          row2.getBigDecimal("DECIMAL_COL"));
+
       Assert.assertTrue(row1.getBoolean("BIT_COL"));
       Assert.assertFalse(row2.getBoolean("BIT_COL"));
       // Verify time columns
@@ -231,8 +239,8 @@ public class MysqlSinkTestRun extends MysqlPluginTestBase {
                          .set("MEDIUMINT_COL", 8388607)
                          .set("FLOAT_COL", 3.456f)
                          .set("REAL_COL", 3.457)
-                         .set("NUMERIC_COL", 3.458d)
-                         .set("DECIMAL_COL", 3.459d)
+                         .setDecimal("NUMERIC_COL", new BigDecimal(3.458d, new MathContext(PRECISION)).setScale(SCALE))
+                         .setDecimal("DECIMAL_COL", new BigDecimal(3.459d, new MathContext(PRECISION)).setScale(SCALE))
                          .set("BIT_COL", (i % 2 == 1))
                          .setDate("DATE_COL", localDateTime.toLocalDate())
                          .setTime("TIME_COL", localDateTime.toLocalTime())
