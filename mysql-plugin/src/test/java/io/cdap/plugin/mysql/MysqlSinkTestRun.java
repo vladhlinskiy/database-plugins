@@ -83,8 +83,6 @@ public class MysqlSinkTestRun extends MysqlPluginTestBase {
     Schema.Field.of("SET_COL", Schema.of(Schema.Type.STRING))
   );
 
-  private static final List<StructuredRecord> INPUT_RECORDS = new ArrayList<>();
-
   @Before
   public void setup() throws Exception {
     try (Statement stmt = createConnection().createStatement()) {
@@ -94,17 +92,17 @@ public class MysqlSinkTestRun extends MysqlPluginTestBase {
 
   @Test
   public void testDBSinkWithExplicitInputSchema() throws Exception {
-    testDBSink("testDBSinkWithExplicitInputSchema", "input-dbsinktest-explicit", true);
+    testDBSink("testDBSinkWithExplicitInputSchema", "input-dbsinktest-explicit", SCHEMA);
   }
 
   @Test
   public void testDBSinkWithInferredInputSchema() throws Exception {
-    testDBSink("testDBSinkWithInferredInputSchema", "input-dbsinktest-inferred", false);
+    testDBSink("testDBSinkWithInferredInputSchema", "input-dbsinktest-inferred", null);
   }
 
-  private void testDBSink(String appName, String inputDatasetName, boolean setInputSchema) throws Exception {
-    ETLPlugin sourceConfig = (setInputSchema)
-      ? MockSource.getPlugin(inputDatasetName, SCHEMA)
+  private void testDBSink(String appName, String inputDatasetName, Schema schema) throws Exception {
+    ETLPlugin sourceConfig = (schema != null)
+      ? MockSource.getPlugin(inputDatasetName, schema)
       : MockSource.getPlugin(inputDatasetName);
 
     ETLPlugin sinkConfig = new ETLPlugin(
@@ -121,14 +119,18 @@ public class MysqlSinkTestRun extends MysqlPluginTestBase {
       null);
 
     ApplicationManager appManager = deployETL(sourceConfig, sinkConfig, DATAPIPELINE_ARTIFACT, appName);
-    createInputData(inputDatasetName);
+
+    // Prepare test input data
+    List<StructuredRecord> inputRecords = createInputData();
+    DataSetManager<Table> inputManager = getDataset(inputDatasetName);
+    MockSource.writeInput(inputManager, inputRecords);
     runETLOnce(appManager, ImmutableMap.of("logical.start.time", String.valueOf(CURRENT_TS)));
 
     try (Connection conn = createConnection();
          Statement stmt1 = conn.createStatement();
          ResultSet actual = stmt1.executeQuery("SELECT * FROM MY_DEST_TABLE ORDER BY ID")) {
 
-      for (StructuredRecord expected : INPUT_RECORDS) {
+      for (StructuredRecord expected : inputRecords) {
         Assert.assertTrue(actual.next());
 
         // Verify data
@@ -200,16 +202,14 @@ public class MysqlSinkTestRun extends MysqlPluginTestBase {
   }
 
   /**
-   * Added to prevent repetitive casts to 'double' and specifying delta.
+   * Added to prevent repetitive casts to 'float' and specifying delta.
    */
   private void assertNumericEquals(float expected, float actual) {
     Assert.assertEquals(expected, actual, 0.000001);
   }
 
-  private void createInputData(String inputDatasetName) throws Exception {
-    // add some data to the input table
-    DataSetManager<Table> inputManager = getDataset(inputDatasetName);
-    INPUT_RECORDS.clear();
+  private List<StructuredRecord> createInputData() throws Exception {
+    List<StructuredRecord> inputRecords = new ArrayList<>();
     LocalDateTime localDateTime = new Timestamp(CURRENT_TS).toLocalDateTime();
     for (int i = 1; i <= 2; i++) {
       String name = "user" + i;
@@ -246,8 +246,9 @@ public class MysqlSinkTestRun extends MysqlPluginTestBase {
         .set("ENUM_COL", "Second")
         .set("SET_COL", "a,b,c,d");
 
-      INPUT_RECORDS.add(builder.build());
+      inputRecords.add(builder.build());
     }
-    MockSource.writeInput(inputManager, INPUT_RECORDS);
+
+    return inputRecords;
   }
 }
