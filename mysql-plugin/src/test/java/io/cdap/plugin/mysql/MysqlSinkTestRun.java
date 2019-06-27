@@ -18,7 +18,6 @@ package io.cdap.plugin.mysql;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
-import io.cdap.cdap.api.common.Bytes;
 import io.cdap.cdap.api.data.format.StructuredRecord;
 import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.cdap.api.dataset.table.Table;
@@ -36,19 +35,12 @@ import org.junit.Test;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.sql.Connection;
-import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.Statement;
-import java.sql.Time;
 import java.sql.Timestamp;
-import java.text.SimpleDateFormat;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -91,6 +83,8 @@ public class MysqlSinkTestRun extends MysqlPluginTestBase {
     Schema.Field.of("SET_COL", Schema.of(Schema.Type.STRING))
   );
 
+  private static final List<StructuredRecord> INPUT_RECORDS = new ArrayList<>();
+
   @Before
   public void setup() throws Exception {
     try (Statement stmt = createConnection().createStatement()) {
@@ -132,136 +126,128 @@ public class MysqlSinkTestRun extends MysqlPluginTestBase {
 
     try (Connection conn = createConnection();
          Statement stmt1 = conn.createStatement();
-         ResultSet row1 = stmt1.executeQuery("SELECT * FROM MY_DEST_TABLE WHERE ID=1");
-         Statement stmt2 = conn.createStatement();
-         ResultSet row2 = stmt2.executeQuery("SELECT * FROM MY_DEST_TABLE WHERE ID=2")) {
+         ResultSet actual = stmt1.executeQuery("SELECT * FROM MY_DEST_TABLE ORDER BY ID")) {
 
-      Assert.assertTrue(row1.next());
-      Assert.assertTrue(row2.next());
+      for (StructuredRecord expected : INPUT_RECORDS) {
+        Assert.assertTrue(actual.next());
 
-      // Verify data
-      Assert.assertEquals(1, row1.getInt("ID"));
-      Assert.assertEquals(2, row2.getInt("ID"));
-      Assert.assertEquals("user1", row1.getString("NAME"));
-      Assert.assertEquals("user2", row2.getString("NAME"));
-      Assert.assertEquals("user1", row1.getString("TEXT_COL"));
-      Assert.assertEquals("user2", row2.getString("TEXT_COL"));
-      Assert.assertEquals("user1", row1.getString("TINYTEXT_COL"));
-      Assert.assertEquals("user2", row2.getString("TINYTEXT_COL"));
-      Assert.assertEquals("user1", row1.getString("MEDIUMTEXT_COL"));
-      Assert.assertEquals("user2", row2.getString("MEDIUMTEXT_COL"));
-      Assert.assertEquals("user1", row1.getString("LONGTEXT_COL"));
-      Assert.assertEquals("user2", row2.getString("LONGTEXT_COL"));
-      Assert.assertEquals("char1", row1.getString("CHAR_COL").trim());
-      Assert.assertEquals("char2", row2.getString("CHAR_COL").trim());
-      Assert.assertEquals(3.451, row1.getDouble("SCORE"), 0.000001);
-      Assert.assertEquals(3.451, row2.getDouble("SCORE"), 0.000001);
-      Assert.assertEquals(false, row1.getBoolean("GRADUATED"));
-      Assert.assertEquals(true, row2.getBoolean("GRADUATED"));
-      Assert.assertNull(row1.getString("NOT_IMPORTED"));
-      Assert.assertEquals("Second", row1.getString("ENUM_COL"));
-      Assert.assertEquals("Second", row2.getString("ENUM_COL"));
-      Assert.assertEquals("a,b,c,d", row1.getString("SET_COL"));
-      Assert.assertEquals("a,b,c,d", row2.getString("SET_COL"));
+        // Verify data
+        assertObjectEquals(expected.get("ID"), actual.getInt("ID"));
+        assertObjectEquals(expected.get("NAME"), actual.getString("NAME"));
+        assertObjectEquals(expected.get("TEXT_COL"), actual.getString("TEXT_COL"));
+        assertObjectEquals(expected.get("TINYTEXT_COL"), actual.getString("TINYTEXT_COL"));
+        assertObjectEquals(expected.get("MEDIUMTEXT_COL"), actual.getString("MEDIUMTEXT_COL"));
+        assertObjectEquals(expected.get("LONGTEXT_COL"), actual.getString("LONGTEXT_COL"));
+        assertObjectEquals(expected.get("CHAR_COL"), actual.getString("CHAR_COL").trim());
+        assertObjectEquals(expected.get("GRADUATED"), actual.getBoolean("GRADUATED"));
+        Assert.assertNull(actual.getString("NOT_IMPORTED"));
+        assertObjectEquals(expected.get("ENUM_COL"), actual.getString("ENUM_COL"));
+        assertObjectEquals(expected.get("SET_COL"), actual.getString("SET_COL"));
+        assertObjectEquals(expected.get("TINY"), actual.getInt("TINY"));
+        assertObjectEquals(expected.get("SMALL"), actual.getInt("SMALL"));
+        assertObjectEquals(expected.get("BIG"), actual.getLong("BIG"));
+        assertObjectEquals(expected.get("MEDIUMINT_COL"), actual.getInt("MEDIUMINT_COL"));
+        assertNumericEquals(expected.get("SCORE"), actual.getDouble("SCORE"));
+        assertNumericEquals(expected.get("FLOAT_COL"), actual.getFloat("FLOAT_COL"));
+        assertNumericEquals(expected.get("REAL_COL"), actual.getDouble("REAL_COL"));
+        assertObjectEquals(expected.getDecimal("NUMERIC_COL"), actual.getBigDecimal("NUMERIC_COL"));
+        assertObjectEquals(expected.getDecimal("DECIMAL_COL"), actual.getBigDecimal("DECIMAL_COL"));
+        assertObjectEquals(expected.get("BIT_COL"), actual.getBoolean("BIT_COL"));
 
-      Assert.assertEquals(1, row1.getShort("TINY"));
-      Assert.assertEquals(2, row2.getShort("TINY"));
-      Assert.assertEquals(1, row1.getShort("SMALL"));
-      Assert.assertEquals(2, row2.getShort("SMALL"));
-      Assert.assertEquals(3456987L, row1.getLong("BIG"));
-      Assert.assertEquals(3456987L, row2.getLong("BIG"));
-      Assert.assertEquals(8388607, row1.getInt("MEDIUMINT_COL"));
-      Assert.assertEquals(8388607, row2.getInt("MEDIUMINT_COL"));
+        // Verify binary columns
+        assertBytesEquals(expected.get("BINARY_COL"), actual.getBytes("BINARY_COL"));
+        assertBytesEquals(expected.get("VARBINARY_COL"), actual.getBytes("VARBINARY_COL"));
+        assertBytesEquals(expected.get("BLOB_COL"), actual.getBytes("BLOB_COL"));
+        assertBytesEquals(expected.get("MEDIUMBLOB_COL"), actual.getBytes("MEDIUMBLOB_COL"));
+        assertBytesEquals(expected.get("TINYBLOB_COL"), actual.getBytes("TINYBLOB_COL"));
+        assertBytesEquals(expected.get("LONGBLOB_COL"), actual.getBytes("LONGBLOB_COL"));
 
-      Assert.assertEquals(3.456f, row1.getFloat("FLOAT_COL"), 0.00001);
-      Assert.assertEquals(3.456f, row2.getFloat("FLOAT_COL"), 0.00001);
-      Assert.assertEquals(3.457, row1.getDouble("REAL_COL"), 0.00001);
-      Assert.assertEquals(3.457, row2.getDouble("REAL_COL"), 0.00001);
+        // Verify time columns
+        Assert.assertEquals(expected.getDate("DATE_COL"), actual.getDate("DATE_COL").toLocalDate());
 
-      Assert.assertEquals(new BigDecimal(3.458, new MathContext(PRECISION)).setScale(SCALE),
-                          row1.getBigDecimal("NUMERIC_COL"));
-      Assert.assertEquals(new BigDecimal(3.458, new MathContext(PRECISION)).setScale(SCALE),
-                          row2.getBigDecimal("NUMERIC_COL"));
-      Assert.assertEquals(new BigDecimal(3.459, new MathContext(PRECISION)).setScale(SCALE),
-                          row1.getBigDecimal("DECIMAL_COL"));
-      Assert.assertEquals(new BigDecimal(3.459, new MathContext(PRECISION)).setScale(SCALE),
-                          row2.getBigDecimal("DECIMAL_COL"));
-
-      Assert.assertTrue(row1.getBoolean("BIT_COL"));
-      Assert.assertFalse(row2.getBoolean("BIT_COL"));
-      // Verify time columns
-      java.util.Date date = new java.util.Date(CURRENT_TS);
-      SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-      LocalDate expectedDate = Date.valueOf(sdf.format(date)).toLocalDate();
-      sdf = new SimpleDateFormat("H:mm:ss");
-      LocalTime expectedTime = Time.valueOf(sdf.format(date)).toLocalTime();
-      ZonedDateTime expectedTs = date.toInstant().atZone(ZoneId.ofOffset("UTC", ZoneOffset.UTC));
-      Assert.assertEquals(expectedDate, row1.getDate("DATE_COL").toLocalDate());
-      Assert.assertEquals(expectedTime, row1.getTime("TIME_COL").toLocalTime());
-      Assert.assertEquals(expectedDate.getYear(), row1.getInt("YEAR_COL"));
-      Assert.assertEquals(expectedTs, row1.getTimestamp("DATETIME_COL").toInstant()
-        .atZone(ZoneId.ofOffset("UTC", ZoneOffset.UTC)));
-      Assert.assertEquals(expectedTs, row1.getTimestamp("TIMESTAMP_COL").toInstant()
-        .atZone(ZoneId.ofOffset("UTC", ZoneOffset.UTC)));
-
-      // verify binary columns
-      Assert.assertEquals("user1", Bytes.toString(row1.getBytes("BINARY_COL"), 0, 5));
-      Assert.assertEquals("user2", Bytes.toString(row2.getBytes("BINARY_COL"), 0, 5));
-      Assert.assertEquals("user1", Bytes.toString(row1.getBytes("VARBINARY_COL"), 0, 5));
-      Assert.assertEquals("user2", Bytes.toString(row2.getBytes("VARBINARY_COL"), 0, 5));
-      Assert.assertEquals("user1", Bytes.toString(row1.getBytes("BLOB_COL"), 0, 5));
-      Assert.assertEquals("user2", Bytes.toString(row2.getBytes("BLOB_COL"), 0, 5));
-      Assert.assertEquals("user1", Bytes.toString(row1.getBytes("MEDIUMBLOB_COL"), 0, 5));
-      Assert.assertEquals("user2", Bytes.toString(row2.getBytes("MEDIUMBLOB_COL"), 0, 5));
-      Assert.assertEquals("user1", Bytes.toString(row1.getBytes("TINYBLOB_COL"), 0, 5));
-      Assert.assertEquals("user2", Bytes.toString(row2.getBytes("TINYBLOB_COL"), 0, 5));
-      Assert.assertEquals("user1", Bytes.toString(row1.getBytes("LONGBLOB_COL"), 0, 5));
-      Assert.assertEquals("user2", Bytes.toString(row2.getBytes("LONGBLOB_COL"), 0, 5));
+        // compare seconds, since mysql 'time' type does not store milliseconds but 'LocalTime' does
+        Assert.assertEquals(expected.getTime("TIME_COL").toSecondOfDay(),
+                            actual.getTime("TIME_COL").toLocalTime().toSecondOfDay());
+        Assert.assertEquals(expected.getDate("YEAR_COL").getYear(), actual.getInt("YEAR_COL"));
+        Assert.assertEquals(expected.getTimestamp("DATETIME_COL"),
+                            actual.getTimestamp("DATETIME_COL").toInstant().atZone(UTC_ZONE));
+        Assert.assertEquals(expected.getTimestamp("TIMESTAMP_COL"),
+                            actual.getTimestamp("TIMESTAMP_COL").toInstant().atZone(UTC_ZONE));
+      }
     }
+  }
 
+  /**
+   * Added to prevent 'Ambiguous method call' issue
+   */
+  private void assertObjectEquals(Object expected, Object actual) {
+    Assert.assertEquals(expected, actual);
+  }
+
+  /**
+   * Added to trim arrays of bytes since it's common that actual arrays are larger.
+   */
+  private void assertBytesEquals(byte[] expected, byte[] actual) {
+    Assert.assertTrue(actual.length >= expected.length);
+    Assert.assertArrayEquals(expected, Arrays.copyOf(actual, expected.length));
+  }
+
+  /**
+   * Added to prevent repetitive casts to 'double' and specifying delta.
+   */
+  private void assertNumericEquals(double expected, double actual) {
+    Assert.assertEquals(expected, actual, 0.000001);
+  }
+
+  /**
+   * Added to prevent repetitive casts to 'double' and specifying delta.
+   */
+  private void assertNumericEquals(float expected, float actual) {
+    Assert.assertEquals(expected, actual, 0.000001);
   }
 
   private void createInputData(String inputDatasetName) throws Exception {
     // add some data to the input table
     DataSetManager<Table> inputManager = getDataset(inputDatasetName);
-    List<StructuredRecord> inputRecords = new ArrayList<>();
+    INPUT_RECORDS.clear();
     LocalDateTime localDateTime = new Timestamp(CURRENT_TS).toLocalDateTime();
     for (int i = 1; i <= 2; i++) {
       String name = "user" + i;
-      inputRecords.add(StructuredRecord.builder(SCHEMA)
-                         .set("ID", i)
-                         .set("NAME", name)
-                         .set("SCORE", 3.451)
-                         .set("GRADUATED", (i % 2 == 0))
-                         .set("TINY", i)
-                         .set("SMALL", i)
-                         .set("BIG", 3456987L)
-                         .set("MEDIUMINT_COL", 8388607)
-                         .set("FLOAT_COL", 3.456f)
-                         .set("REAL_COL", 3.457)
-                         .setDecimal("NUMERIC_COL", new BigDecimal(3.458d, new MathContext(PRECISION)).setScale(SCALE))
-                         .setDecimal("DECIMAL_COL", new BigDecimal(3.459d, new MathContext(PRECISION)).setScale(SCALE))
-                         .set("BIT_COL", (i % 2 == 1))
-                         .setDate("DATE_COL", localDateTime.toLocalDate())
-                         .setTime("TIME_COL", localDateTime.toLocalTime())
-                         .setTimestamp("TIMESTAMP_COL", localDateTime.atZone(ZoneId.ofOffset("UTC", ZoneOffset.UTC)))
-                         .setTimestamp("DATETIME_COL",  localDateTime.atZone(ZoneId.ofOffset("UTC", ZoneOffset.UTC)))
-                         .setDate("YEAR_COL",  localDateTime.toLocalDate())
-                         .set("TEXT_COL", name)
-                         .set("TINYTEXT_COL", name)
-                         .set("MEDIUMTEXT_COL", name)
-                         .set("LONGTEXT_COL", name)
-                         .set("CHAR_COL", "char" + i)
-                         .set("BINARY_COL", name.getBytes(Charsets.UTF_8))
-                         .set("VARBINARY_COL", name.getBytes(Charsets.UTF_8))
-                         .set("TINYBLOB_COL", name.getBytes(Charsets.UTF_8))
-                         .set("BLOB_COL", name.getBytes(Charsets.UTF_8))
-                         .set("MEDIUMBLOB_COL", name.getBytes(Charsets.UTF_8))
-                         .set("LONGBLOB_COL", name.getBytes(Charsets.UTF_8))
-                         .set("ENUM_COL", "Second")
-                         .set("SET_COL", "a,b,c,d")
-                         .build());
+      StructuredRecord.Builder builder = StructuredRecord.builder(SCHEMA)
+        .set("ID", i)
+        .set("NAME", name)
+        .set("SCORE", 3.451)
+        .set("GRADUATED", (i % 2 == 0))
+        .set("TINY", i)
+        .set("SMALL", i)
+        .set("BIG", 3456987L)
+        .set("MEDIUMINT_COL", 8388607)
+        .set("FLOAT_COL", 3.456f)
+        .set("REAL_COL", 3.457)
+        .setDecimal("NUMERIC_COL", new BigDecimal(3.458d, new MathContext(PRECISION)).setScale(SCALE))
+        .setDecimal("DECIMAL_COL", new BigDecimal(3.459d, new MathContext(PRECISION)).setScale(SCALE))
+        .set("BIT_COL", (i % 2 == 1))
+        .setDate("DATE_COL", localDateTime.toLocalDate())
+        .setTime("TIME_COL", localDateTime.toLocalTime())
+        .setTimestamp("TIMESTAMP_COL", localDateTime.atZone(UTC_ZONE))
+        .setTimestamp("DATETIME_COL",  localDateTime.atZone(UTC_ZONE))
+        .setDate("YEAR_COL",  localDateTime.toLocalDate())
+        .set("TEXT_COL", name)
+        .set("TINYTEXT_COL", name)
+        .set("MEDIUMTEXT_COL", name)
+        .set("LONGTEXT_COL", name)
+        .set("CHAR_COL", "char" + i)
+        .set("BINARY_COL", name.getBytes(Charsets.UTF_8))
+        .set("VARBINARY_COL", name.getBytes(Charsets.UTF_8))
+        .set("TINYBLOB_COL", name.getBytes(Charsets.UTF_8))
+        .set("BLOB_COL", name.getBytes(Charsets.UTF_8))
+        .set("MEDIUMBLOB_COL", name.getBytes(Charsets.UTF_8))
+        .set("LONGBLOB_COL", name.getBytes(Charsets.UTF_8))
+        .set("ENUM_COL", "Second")
+        .set("SET_COL", "a,b,c,d");
+
+      INPUT_RECORDS.add(builder.build());
     }
-    MockSource.writeInput(inputManager, inputRecords);
+    MockSource.writeInput(inputManager, INPUT_RECORDS);
   }
 }

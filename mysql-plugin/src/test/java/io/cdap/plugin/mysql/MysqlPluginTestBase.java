@@ -45,6 +45,8 @@ import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Map;
@@ -62,6 +64,7 @@ public class MysqlPluginTestBase extends DatabasePluginTestBase {
   protected static final int YEAR;
   protected static final int PRECISION = 10;
   protected static final int SCALE = 6;
+  protected static final ZoneId UTC_ZONE = ZoneId.ofOffset("UTC", ZoneOffset.UTC);
   protected static boolean tearDown = true;
   private static int startCount;
 
