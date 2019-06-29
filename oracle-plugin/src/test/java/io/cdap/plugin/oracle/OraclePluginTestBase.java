@@ -34,6 +34,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 
+import java.lang.reflect.InvocationTargetException;
 import java.math.BigDecimal;
 import java.sql.Clob;
 import java.sql.Connection;
@@ -44,6 +45,8 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Map;
@@ -60,8 +63,10 @@ public class OraclePluginTestBase extends DatabasePluginTestBase {
 
   protected static String connectionUrl;
   protected static final int YEAR;
+  protected static final int DEFAULT_PRECISION = 38;
   protected static final int PRECISION = 10;
   protected static final int SCALE = 6;
+  protected static final ZoneId UTC_ZONE = ZoneId.ofOffset("UTC", ZoneOffset.UTC);
   protected static boolean tearDown = true;
   private static int startCount;
 
@@ -139,17 +144,19 @@ public class OraclePluginTestBase extends DatabasePluginTestBase {
       stmt.execute("CREATE TABLE my_table (" +
                      "  ID INT NOT NULL, " +
                      "  CHAR_COL CHAR(10)," +
+                     "  NCHAR_COL NCHAR(10)," +
                      "  CHARACTER_COL CHARACTER(10)," +
                      "  VARCHAR_COL VARCHAR(10)," +
                      "  VARCHAR2_COL VARCHAR2(10)," +
-                     "  INT_COL INT," +
-                     "  INTEGER_COL INTEGER," +
+                     "  NVARCHAR2_COL NVARCHAR2(10)," +
+                     "  INT_COL INT," + // synonym for NUMBER(38,0)
+                     "  INTEGER_COL INTEGER," + // synonym for NUMBER(38,0)
                      "  DEC_COL DEC," +
                      "  DECIMAL_COL DECIMAL(" + PRECISION + "," + SCALE + ")," +
                      "  NUMBER_COL NUMBER(" + PRECISION + "," + SCALE + ")," +
                      "  NUMERIC_COL NUMERIC(" + PRECISION + "," + SCALE + ")," +
-                     "  SMALLINT_COL SMALLINT," +
-                     "  REAL_COL REAL," +
+                     "  SMALLINT_COL SMALLINT," + // synonym for NUMBER(38,0)
+                     "  REAL_COL REAL," + // FLOAT(63), value is represented internally as NUMBER.
                      "  DATE_COL DATE," +
                      "  TIMESTAMP_COL TIMESTAMP," +
                      "  TIMESTAMPTZ_COL TIMESTAMP WITH TIME ZONE," +
@@ -159,7 +166,10 @@ public class OraclePluginTestBase extends DatabasePluginTestBase {
                      "  RAW_COL RAW(16)," +
                      "  CLOB_COL CLOB," +
                      "  BLOB_COL BLOB," +
-                     "  NCLOB_COL NCLOB" +
+                     "  NCLOB_COL NCLOB," +
+                     "  FLOAT_COL FLOAT," + // FLOAT(126), value is represented internally as NUMBER.
+                     "  BINARY_FLOAT_COL BINARY_FLOAT," +
+                     "  BINARY_DOUBLE_COL BINARY_DOUBLE" +
                      ")");
       stmt.execute("CREATE TABLE MY_DEST_TABLE AS " +
                      "SELECT * FROM my_table");
@@ -168,18 +178,18 @@ public class OraclePluginTestBase extends DatabasePluginTestBase {
     }
   }
 
-  protected static void prepareTestData(Connection conn) throws SQLException {
+  protected static void prepareTestData(Connection conn) throws Exception {
 
     try (
       Statement stmt = conn.createStatement();
       PreparedStatement pStmt1 =
         conn.prepareStatement("INSERT INTO my_table " +
-                                "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?," +
-                                "       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                                "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?," +
+                                "       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
       PreparedStatement pStmt2 =
         conn.prepareStatement("INSERT INTO your_table " +
-                                "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?," +
-                                "       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
+                                "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?," +
+                                "       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
 
       stmt.execute("insert into dbActionTest values (1, '1970-01-01')");
       stmt.execute("insert into postActionTest values (1, '1970-01-01')");
@@ -188,7 +198,7 @@ public class OraclePluginTestBase extends DatabasePluginTestBase {
     }
   }
 
-  private static void populateData(PreparedStatement... stmts) throws SQLException {
+  private static void populateData(PreparedStatement... stmts) throws Exception {
     // insert the same data into both tables: my_table and your_table
     for (PreparedStatement pStmt : stmts) {
       for (int i = 1; i <= 5; i++) {
@@ -201,31 +211,37 @@ public class OraclePluginTestBase extends DatabasePluginTestBase {
           pStmt.setString(3, name);
           pStmt.setString(4, name);
           pStmt.setString(5, name);
-          pStmt.setInt(6, 42 + i);
-          pStmt.setInt(7, 24 + i);
-          pStmt.setBigDecimal(8, new BigDecimal(54.56 + i));
-          pStmt.setBigDecimal(9, new BigDecimal(54.65 + i));
-          pStmt.setBigDecimal(10, new BigDecimal(32.65 + i));
-          pStmt.setBigDecimal(11, new BigDecimal(23.65 + i));
-          pStmt.setInt(12, i);
-          pStmt.setFloat(13, (float) 14.45 + i);
-          pStmt.setDate(14, new Date(CURRENT_TS));
-          pStmt.setTimestamp(15, new Timestamp(CURRENT_TS));
-          pStmt.setTimestamp(16, new Timestamp(CURRENT_TS));
+          pStmt.setString(6, name);
+          pStmt.setString(7, name);
+          pStmt.setInt(8, 42 + i);
+          pStmt.setInt(9, 24 + i);
+          pStmt.setBigDecimal(10, new BigDecimal(54.56 + i));
+          pStmt.setBigDecimal(11, new BigDecimal(54.65 + i));
+          pStmt.setBigDecimal(12, new BigDecimal(32.65 + i));
+          pStmt.setBigDecimal(13, new BigDecimal(23.65 + i));
+          pStmt.setInt(14, i);
+          pStmt.setFloat(15, (float) 14.45 + i);
+          pStmt.setDate(16, new Date(CURRENT_TS));
           pStmt.setTimestamp(17, new Timestamp(CURRENT_TS));
-          pStmt.setString(18, "300-5");
-          pStmt.setString(19, "23 3:02:10");
-          pStmt.setBytes(20, name.getBytes());
+          pStmt.setTimestamp(18, new Timestamp(CURRENT_TS));
+          pStmt.setTimestamp(19, new Timestamp(CURRENT_TS));
+          pStmt.setString(20, "300-5");
+          pStmt.setString(21, "23 3:02:10");
+          pStmt.setBytes(22, name.getBytes());
 
           clob = pStmt.getConnection().createClob();
           clob.setString(1, name);
-          pStmt.setClob(21, clob);
+          pStmt.setClob(23, clob);
 
-          pStmt.setBytes(22, name.getBytes());
+          pStmt.setBytes(24, name.getBytes());
 
           nClob = pStmt.getConnection().createNClob();
           nClob.setString(1, name);
-          pStmt.setNClob(23, nClob);
+          pStmt.setNClob(25, nClob);
+
+          pStmt.setFloat(26, (float) 123.45 + i);
+          pStmt.setObject(27, createBinaryFloatObject((float) 123.45 + i));
+          pStmt.setObject(28, createBinaryDoubleObject(123.45 + i));
 
           pStmt.executeUpdate();
         } finally {
@@ -249,6 +265,22 @@ public class OraclePluginTestBase extends DatabasePluginTestBase {
     } catch (Exception e) {
       throw Throwables.propagate(e);
     }
+  }
+
+  private static Object createBinaryFloatObject(float value) throws ClassNotFoundException, NoSuchMethodException,
+    InvocationTargetException, InstantiationException, IllegalAccessException {
+    return createOracleBinaryObject("oracle.sql.BINARY_FLOAT", value);
+  }
+
+  private static Object createBinaryDoubleObject(double value) throws ClassNotFoundException, NoSuchMethodException,
+    InvocationTargetException, InstantiationException, IllegalAccessException {
+    return createOracleBinaryObject("oracle.sql.BINARY_DOUBLE", value);
+  }
+
+  private static Object createOracleBinaryObject(String className, Object value) throws ClassNotFoundException,
+    NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException {
+    Class<?> binaryClass = Class.forName(className);
+    return binaryClass.getConstructor(value.getClass()).newInstance(value);
   }
 
   @AfterClass

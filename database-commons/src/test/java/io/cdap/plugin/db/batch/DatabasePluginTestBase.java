@@ -40,6 +40,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -185,5 +186,34 @@ public class DatabasePluginTestBase extends HydratorTestBase {
       users.add(resultSet.getString(columnName).trim());
     }
     Assert.assertFalse(users.contains("1"));
+  }
+
+  /**
+   * Added to prevent 'Ambiguous method call' issue
+   */
+  protected static void assertObjectEquals(Object expected, Object actual) {
+    Assert.assertEquals(expected, actual);
+  }
+
+  /**
+   * Added to trim arrays of bytes since it's common that actual arrays are larger.
+   */
+  protected static void assertBytesEquals(byte[] expected, byte[] actual) {
+    Assert.assertTrue(actual.length >= expected.length);
+    Assert.assertArrayEquals(expected, Arrays.copyOf(actual, expected.length));
+  }
+
+  /**
+   * Added to prevent repetitive casts to 'double' and specifying delta.
+   */
+  protected static void assertNumericEquals(double expected, double actual) {
+    Assert.assertEquals(expected, actual, 0.000001);
+  }
+
+  /**
+   * Added to prevent repetitive casts to 'float' and specifying delta.
+   */
+  protected static void assertNumericEquals(float expected, float actual) {
+    Assert.assertEquals(expected, actual, 0.000001);
   }
 }
