@@ -19,12 +19,14 @@ package io.cdap.plugin.db;
 import com.google.common.collect.Lists;
 import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.cdap.api.data.schema.UnsupportedTypeException;
+import io.cdap.plugin.util.DBUtils;
 
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Common schema reader for mapping non specific DB types.

@@ -83,7 +83,7 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
   protected int[] columnTypes;
   protected List<String> columns;
   protected String dbColumns;
-  private Schema outputSchema;
+  protected Schema outputSchema;
 
   public AbstractDBSink(DBSinkConfig dbSinkConfig) {
     super(new ReferencePluginConfig(dbSinkConfig.referenceName));
@@ -217,11 +217,19 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
       outputFields.add(field);
     }
     StructuredRecord.Builder output = StructuredRecord.builder(outputSchema);
-    for (String column : columns) {
-      output.set(column, input.get(column));
+    for (int i = 0; i < columns.size(); i++) {
+      transformField(input, i, output);
     }
 
     emitter.emit(new KeyValue<>(getDBRecord(output), null));
+  }
+
+  /**
+   * Allows to customize the way how a single field set on the transform output.
+   */
+  protected void transformField(StructuredRecord input, int index, StructuredRecord.Builder output) {
+    String fieldName = columns.get(index);
+    output.set(fieldName, input.get(fieldName));
   }
 
   protected DBRecord getDBRecord(StructuredRecord.Builder output) {
@@ -380,6 +388,10 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
         statement.execute(query);
       }
     }
+  }
+
+  protected Schema getSchema(int sqlType, int precision, int scale) throws SQLException {
+    return DBUtils.getSchema(sqlType, precision, scale);
   }
 
   /**
