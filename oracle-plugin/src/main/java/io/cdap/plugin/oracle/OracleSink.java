@@ -21,11 +21,17 @@ import io.cdap.cdap.api.annotation.Description;
 import io.cdap.cdap.api.annotation.Name;
 import io.cdap.cdap.api.annotation.Plugin;
 import io.cdap.cdap.api.data.format.StructuredRecord;
+import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.cdap.etl.api.batch.BatchSink;
 import io.cdap.plugin.db.DBRecord;
+import io.cdap.plugin.db.SchemaReader;
 import io.cdap.plugin.db.batch.config.DBSpecificSinkConfig;
 import io.cdap.plugin.db.batch.sink.AbstractDBSink;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.sql.Types;
+import java.util.Collections;
 import java.util.Map;
 import javax.annotation.Nullable;
 
@@ -47,6 +53,63 @@ public class OracleSink extends AbstractDBSink {
   @Override
   protected DBRecord getDBRecord(StructuredRecord.Builder output) {
     return new OracleDBRecord(output.build(), columnTypes);
+  }
+
+  @Override
+  protected void transformField(StructuredRecord input, int index, StructuredRecord.Builder output) {
+    String fieldName = columns.get(index);
+    Schema.Field field = input.getSchema().getField(fieldName);
+    if (field == null) {
+      super.transformField(input, index, output);
+      return;
+    }
+
+    int sqlType = columnTypes[index];
+    Schema inputFieldSchema = field.getSchema().isNullable() ? field.getSchema().getNonNullable() : field.getSchema();
+    Schema outputFieldSchema = outputSchema.getField(fieldName).getSchema().isNullable() ?
+      outputSchema.getField(fieldName).getSchema() : outputSchema.getField(fieldName).getSchema();
+    Schema decimalSchema = OracleUtil.getLogicalTypeSchema(outputFieldSchema,
+                                                           Collections.singleton(Schema.LogicalType.DECIMAL));
+    if (decimalSchema == null || !(sqlType == Types.NUMERIC || sqlType == Types.DECIMAL)) {
+      super.transformField(input, index, output);
+      return;
+    }
+
+    // Handle the case when output expects Decimal Logical Type but we got valid primitive.
+    // This allows valid primitive values to be converted into corresponding instances of
+    // BigDecimal(honoring scale and precision)
+    // Thus we can support the following schema compatibility and do writes for the Sink:
+    // 1) Schema.Type.INT -> Schema.LogicalType.DECIMAL (if precision of actual decimal logical type >= 10)
+    // 2) Schema.Type.LONG -> Schema.LogicalType.DECIMAL (if precision of actual decimal logical type >= 19)
+    // 3) Schema.Type.FLOAT -> Schema.LogicalType.DECIMAL (primitive value can be rounded to match actual schema)
+    // 4) Schema.Type.DOUBLE -> Schema.LogicalType.DECIMAL (primitive value can be rounded to match actual schema)
+    int precision = decimalSchema.getPrecision();
+    int scale = decimalSchema.getScale();
+    switch (inputFieldSchema.getType()) {
+      case INT:
+        BigDecimal decimalOfInt = new BigDecimal(input.<Integer>get(fieldName), new MathContext(precision));
+        output.setDecimal(fieldName, decimalOfInt.setScale(scale, BigDecimal.ROUND_HALF_UP));
+        break;
+      case LONG:
+        BigDecimal decimalOfLong = new BigDecimal(input.<Long>get(fieldName), new MathContext(precision));
+        output.setDecimal(fieldName, decimalOfLong.setScale(scale, BigDecimal.ROUND_HALF_UP));
+        break;
+      case FLOAT:
+        BigDecimal decimalOfFloat = new BigDecimal(input.<Float>get(fieldName), new MathContext(precision));
+        output.setDecimal(fieldName, decimalOfFloat.setScale(scale, BigDecimal.ROUND_HALF_UP));
+        break;
+      case DOUBLE:
+        BigDecimal decimalOfDouble = new BigDecimal(input.<Double>get(fieldName), new MathContext(precision));
+        output.setDecimal(fieldName, decimalOfDouble.setScale(scale, BigDecimal.ROUND_HALF_UP));
+        break;
+      default:
+        output.set(fieldName, input.get(fieldName));
+    }
+  }
+
+  @Override
+  protected SchemaReader getSchemaReader() {
+    return new OracleSchemaReader();
   }
 
   /**

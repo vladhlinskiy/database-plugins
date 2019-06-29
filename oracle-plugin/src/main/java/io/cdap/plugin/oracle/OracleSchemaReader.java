@@ -22,6 +22,8 @@ import io.cdap.plugin.db.CommonSchemaReader;
 
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Types;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -29,31 +31,98 @@ import java.util.Set;
  */
 public class OracleSchemaReader extends CommonSchemaReader {
   /**
-   *  Oracle type constants, from Oracle JDBC Implementation.
+   * Oracle type constants, from Oracle JDBC Implementation.
    */
   public static final int INTERVAL_YM = -103;
   public static final int INTERVAL_DS = -104;
   public static final int TIMESTAMP_TZ = -101;
   public static final int TIMESTAMP_LTZ = -102;
+  public static final int BINARY_FLOAT = 100;
+  public static final int BINARY_DOUBLE = 101;
+  public static final int BFILE = -13;
 
   public static final Set<Integer> ORACLE_TYPES = ImmutableSet.of(
     INTERVAL_DS,
     INTERVAL_YM,
     TIMESTAMP_TZ,
-    TIMESTAMP_LTZ
+    TIMESTAMP_LTZ,
+    BINARY_FLOAT,
+    BINARY_DOUBLE,
+    BFILE,
+    Types.NUMERIC,
+    Types.DECIMAL
   );
 
   @Override
   public Schema getSchema(ResultSetMetaData metadata, int index) throws SQLException {
     int sqlType = metadata.getColumnType(index);
 
-    if (ORACLE_TYPES.contains(sqlType)) {
-      if (sqlType == TIMESTAMP_LTZ || sqlType == TIMESTAMP_TZ) {
+    switch (sqlType) {
+      case TIMESTAMP_TZ:
+      case TIMESTAMP_LTZ:
         return Schema.of(Schema.LogicalType.TIMESTAMP_MICROS);
-      }
-      return Schema.of(Schema.Type.STRING);
-    } else {
-      return super.getSchema(metadata, index);
+      case BINARY_FLOAT:
+        return Schema.of(Schema.Type.FLOAT);
+      case BINARY_DOUBLE:
+        return Schema.of(Schema.Type.DOUBLE);
+      case BFILE:
+        return Schema.of(Schema.Type.BYTES);
+      case INTERVAL_DS:
+      case INTERVAL_YM:
+        return Schema.of(Schema.Type.STRING);
+      case Types.NUMERIC:
+      case Types.DECIMAL:
+        // This is the only way to differentiate FLOAT/REAL columns from other numeric columns, that based on NUMBER.
+        // Since in Oracle FLOAT is a subtype of the NUMBER data type, 'getColumnType' and 'getColumnTypeName' can not
+        // be used, 'scale' also can not be used in this case since it's value reported as '-127'.
+        if (Double.class.getTypeName().equals(metadata.getColumnClassName(index))) {
+          return Schema.of(Schema.Type.DOUBLE);
+        } else {
+          return super.getSchema(metadata, index);
+        }
+      default:
+        return super.getSchema(metadata, index);
+    }
+  }
+
+  @Override
+  public boolean isTypeCompatible(Schema.Field field, ResultSetMetaData metadata, int index) throws SQLException {
+
+    Schema outputFieldSchema = getSchema(metadata, index);
+    Schema inputFieldSchema = field.getSchema().isNullable() ? field.getSchema().getNonNullable() : field.getSchema();
+
+    // This is the only way to differentiate FLOAT/REAL columns from other numeric columns, that based on NUMBER.
+    // Since FLOAT is a subtype of the NUMBER data type, 'getColumnType' and 'getColumnTypeName' can not be used.
+    // 'scale' also can not be used in this case since it's value reported as '-127'.
+    if (Double.class.getTypeName().equals(metadata.getColumnClassName(index))) {
+      return Objects.equals(inputFieldSchema.getType(), outputFieldSchema.getType());
+    }
+
+    int type = metadata.getColumnType(index);
+    if (Types.NUMERIC != type && Types.DECIMAL != type || !OracleUtil.isDecimalLogicalType(outputFieldSchema) ||
+      OracleUtil.isDecimalLogicalType(field.getSchema())) {
+      return super.isTypeCompatible(field, metadata, index);
+    }
+
+    // Handle the case when output schema expects Decimal Logical Type but we got valid primitive.
+    // This allows primitive values to be converted into corresponding instances of
+    // BigDecimal(honoring scale and precision)
+    int precision = metadata.getPrecision(index);
+    switch (inputFieldSchema.getType()) {
+      case INT:
+        // With 10 digits we can represent Integer.MAX_VALUE so it's safe to w
+        // It is equal to the value returned by (new BigDecimal(Integer.MAX_VALUE)).precision()
+        return precision >= 10;
+      case LONG:
+        // With 19 digits we can represent Long.MAX_VALUE.
+        // It is equal to the value returned by (new BigDecimal(Long.MAX_VALUE)).precision()
+        return precision >= 19;
+      case FLOAT:
+      case DOUBLE:
+        // Actual value can be rounded to match output schema
+        return true;
+      default:
+        return super.isTypeCompatible(field, metadata, index);
     }
   }
 }

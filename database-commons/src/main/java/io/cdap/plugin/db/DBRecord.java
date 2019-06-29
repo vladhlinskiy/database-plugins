@@ -209,7 +209,7 @@ public class DBRecord implements Writable, DBWritable, Configurable {
     }
   }
 
-  private Schema getNonNullableSchema(Schema.Field field) {
+  protected Schema getNonNullableSchema(Schema.Field field) {
     Schema schema = field.getSchema();
     if (field.getSchema().isNullable()) {
       schema = field.getSchema().getNonNullable();
@@ -342,7 +342,7 @@ public class DBRecord implements Writable, DBWritable, Configurable {
     stmt.setBytes(sqlIndex, byteValue);
   }
 
-  private void writeInt(PreparedStatement stmt, int fieldIndex, int sqlIndex, Object fieldValue) throws SQLException {
+  protected void writeInt(PreparedStatement stmt, int fieldIndex, int sqlIndex, Object fieldValue) throws SQLException {
     Integer intValue = (Integer) fieldValue;
     int parameterType = columnTypes[fieldIndex];
     if (Types.TINYINT == parameterType || Types.SMALLINT == parameterType) {
