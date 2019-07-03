@@ -40,6 +40,8 @@ public class OracleSchemaReader extends CommonSchemaReader {
   public static final int BINARY_FLOAT = 100;
   public static final int BINARY_DOUBLE = 101;
   public static final int BFILE = -13;
+  public static final int LONG = -1;
+  public static final int LONG_RAW = -4;
 
   public static final Set<Integer> ORACLE_TYPES = ImmutableSet.of(
     INTERVAL_DS,
@@ -49,6 +51,8 @@ public class OracleSchemaReader extends CommonSchemaReader {
     BINARY_FLOAT,
     BINARY_DOUBLE,
     BFILE,
+    LONG,
+    LONG_RAW,
     Types.NUMERIC,
     Types.DECIMAL
   );
@@ -66,9 +70,11 @@ public class OracleSchemaReader extends CommonSchemaReader {
       case BINARY_DOUBLE:
         return Schema.of(Schema.Type.DOUBLE);
       case BFILE:
+      case LONG_RAW:
         return Schema.of(Schema.Type.BYTES);
       case INTERVAL_DS:
       case INTERVAL_YM:
+      case LONG:
         return Schema.of(Schema.Type.STRING);
       case Types.NUMERIC:
       case Types.DECIMAL:
