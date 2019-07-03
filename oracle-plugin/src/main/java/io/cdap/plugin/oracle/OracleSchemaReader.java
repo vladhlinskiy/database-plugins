@@ -80,7 +80,7 @@ public class OracleSchemaReader extends CommonSchemaReader {
       case Types.DECIMAL:
         // This is the only way to differentiate FLOAT/REAL columns from other numeric columns, that based on NUMBER.
         // Since in Oracle FLOAT is a subtype of the NUMBER data type, 'getColumnType' and 'getColumnTypeName' can not
-        // be used, 'scale' also can not be used in this case since it's value reported as '-127'.
+        // be used.
         if (Double.class.getTypeName().equals(metadata.getColumnClassName(index))) {
           return Schema.of(Schema.Type.DOUBLE);
         } else {
@@ -95,40 +95,42 @@ public class OracleSchemaReader extends CommonSchemaReader {
   public boolean isTypeCompatible(Schema.Field field, ResultSetMetaData metadata, int index) throws SQLException {
 
     Schema outputFieldSchema = getSchema(metadata, index);
-    Schema inputFieldSchema = field.getSchema().isNullable() ? field.getSchema().getNonNullable() : field.getSchema();
+    Schema outputFieldNonNullableSchema = outputFieldSchema.isNullable()
+      ? outputFieldSchema.getNonNullable()
+      : outputFieldSchema;
+    Schema inputFieldNonNullableSchema = field.getSchema().isNullable()
+      ? field.getSchema().getNonNullable()
+      : field.getSchema();
 
     // This is the only way to differentiate FLOAT/REAL columns from other numeric columns, that based on NUMBER.
     // Since FLOAT is a subtype of the NUMBER data type, 'getColumnType' and 'getColumnTypeName' can not be used.
-    // 'scale' also can not be used in this case since it's value reported as '-127'.
     if (Double.class.getTypeName().equals(metadata.getColumnClassName(index))) {
-      return Objects.equals(inputFieldSchema.getType(), outputFieldSchema.getType());
-    }
-
-    int type = metadata.getColumnType(index);
-    if (Types.NUMERIC != type && Types.DECIMAL != type || !OracleUtil.isDecimalLogicalType(outputFieldSchema) ||
-      OracleUtil.isDecimalLogicalType(field.getSchema())) {
-      return super.isTypeCompatible(field, metadata, index);
+      return Objects.equals(inputFieldNonNullableSchema.getType(), outputFieldNonNullableSchema.getType());
     }
 
     // Handle the case when output schema expects Decimal Logical Type but we got valid primitive.
     // This allows primitive values to be converted into corresponding instances of
     // BigDecimal(honoring scale and precision)
-    int precision = metadata.getPrecision(index);
-    switch (inputFieldSchema.getType()) {
-      case INT:
-        // With 10 digits we can represent Integer.MAX_VALUE so it's safe to w
-        // It is equal to the value returned by (new BigDecimal(Integer.MAX_VALUE)).precision()
-        return precision >= 10;
-      case LONG:
-        // With 19 digits we can represent Long.MAX_VALUE.
-        // It is equal to the value returned by (new BigDecimal(Long.MAX_VALUE)).precision()
-        return precision >= 19;
-      case FLOAT:
-      case DOUBLE:
-        // Actual value can be rounded to match output schema
-        return true;
-      default:
-        return super.isTypeCompatible(field, metadata, index);
+    if (Schema.LogicalType.DECIMAL == outputFieldNonNullableSchema.getLogicalType()) {
+      int precision = metadata.getPrecision(index);
+      switch (inputFieldNonNullableSchema.getType()) {
+        case INT:
+          // With 10 digits we can represent Integer.MAX_VALUE so it's safe to w
+          // It is equal to the value returned by (new BigDecimal(Integer.MAX_VALUE)).precision()
+          return precision >= 10;
+        case LONG:
+          // With 19 digits we can represent Long.MAX_VALUE.
+          // It is equal to the value returned by (new BigDecimal(Long.MAX_VALUE)).precision()
+          return precision >= 19;
+        case FLOAT:
+        case DOUBLE:
+          // Actual value can be rounded to match output schema
+          return true;
+        default:
+          return super.isTypeCompatible(field, metadata, index);
+      }
+    } else {
+      return super.isTypeCompatible(field, metadata, index);
     }
   }
 }

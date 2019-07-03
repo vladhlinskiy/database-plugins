@@ -171,11 +171,11 @@ public class OracleSourceTestRun extends OraclePluginTestBase {
     // Verify time columns
     java.util.Date date = new java.util.Date(CURRENT_TS);
 
-    ZonedDateTime expectedTs = date.toInstant().atZone(UTC_ZONE);
+    ZonedDateTime expectedTs = date.toInstant().atZone(UTC);
     Assert.assertEquals(expectedTs.withNano(0), row1.getTimestamp("DATE_COL"));
-    Assert.assertEquals(expectedTs, row1.getTimestamp("TIMESTAMP_COL", UTC_ZONE));
-    Assert.assertEquals(expectedTs, row1.getTimestamp("TIMESTAMPTZ_COL", UTC_ZONE));
-    Assert.assertEquals(expectedTs, row1.getTimestamp("TIMESTAMPLTZ_COL", UTC_ZONE));
+    Assert.assertEquals(expectedTs, row1.getTimestamp("TIMESTAMP_COL", UTC));
+    Assert.assertEquals(expectedTs, row1.getTimestamp("TIMESTAMPTZ_COL", UTC));
+    Assert.assertEquals(expectedTs, row1.getTimestamp("TIMESTAMPLTZ_COL", UTC));
 
     // Oracle specific types
     Assert.assertEquals("300-5", row1.get("INTERVAL_YEAR_TO_MONTH_COL").toString().trim());

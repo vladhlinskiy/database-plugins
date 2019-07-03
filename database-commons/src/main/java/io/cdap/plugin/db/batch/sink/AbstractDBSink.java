@@ -390,10 +390,6 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
     }
   }
 
-  protected Schema getSchema(int sqlType, int precision, int scale) throws SQLException {
-    return DBUtils.getSchema(sqlType, precision, scale);
-  }
-
   /**
    * {@link PluginConfig} for {@link AbstractDBSink}
    */

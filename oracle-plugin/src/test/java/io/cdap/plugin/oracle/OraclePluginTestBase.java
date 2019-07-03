@@ -72,7 +72,7 @@ public class OraclePluginTestBase extends DatabasePluginTestBase {
   protected static final int DEFAULT_PRECISION = 38;
   protected static final int PRECISION = 10;
   protected static final int SCALE = 6;
-  protected static final ZoneId UTC_ZONE = ZoneId.ofOffset("UTC", ZoneOffset.UTC);
+  protected static final ZoneId UTC = ZoneId.ofOffset("UTC", ZoneOffset.UTC);
   protected static boolean tearDown = true;
   private static int startCount;
 
