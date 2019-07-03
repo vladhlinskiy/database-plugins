@@ -85,8 +85,8 @@ public class OracleSourceTestRun extends OraclePluginTestBase {
     String importQuery = "SELECT CHAR_COL, VARCHAR_COL, VARCHAR2_COL, NVARCHAR2_COL, INT_COL, INTEGER_COL, DEC_COL, " +
       "DECIMAL_COL, NUMBER_COL, NUMERIC_COL, SMALLINT_COL, REAL_COL, DATE_COL, TIMESTAMP_COL, " +
       "INTERVAL_YEAR_TO_MONTH_COL, INTERVAL_DAY_TO_SECOND_COL, RAW_COL, TIMESTAMPTZ_COL, TIMESTAMPLTZ_COL, CLOB_COL, " +
-      "NCLOB_COL, BLOB_COL, NCHAR_COL, FLOAT_COL, ROWID, BINARY_FLOAT_COL, BINARY_DOUBLE_COL FROM my_table WHERE " +
-      "SMALLINT_COL < 3 AND $CONDITIONS";
+      "NCLOB_COL, BLOB_COL, NCHAR_COL, FLOAT_COL, ROWID, BINARY_FLOAT_COL, BINARY_DOUBLE_COL, LONG_RAW_COL " +
+      "FROM my_table WHERE SMALLINT_COL < 3 AND $CONDITIONS";
     String boundingQuery = "SELECT MIN(SMALLINT_COL),MAX(SMALLINT_COL) from my_table";
     String splitBy = "SMALLINT_COL";
     ETLPlugin sourceConfig = new ETLPlugin(
@@ -184,6 +184,8 @@ public class OracleSourceTestRun extends OraclePluginTestBase {
     // verify binary columns
     Assert.assertEquals("user1", Bytes.toString((ByteBuffer) row1.get("RAW_COL")));
     Assert.assertEquals("user2", Bytes.toString((ByteBuffer) row2.get("RAW_COL")));
+    Assert.assertEquals("user1", Bytes.toString((ByteBuffer) row1.get("LONG_RAW_COL")));
+    Assert.assertEquals("user2", Bytes.toString((ByteBuffer) row2.get("LONG_RAW_COL")));
     Assert.assertEquals("user1", row1.get("CLOB_COL"));
     Assert.assertEquals("user2", row2.get("CLOB_COL"));
     Assert.assertEquals("user1", row1.get("NCLOB_COL"));
@@ -194,6 +196,46 @@ public class OracleSourceTestRun extends OraclePluginTestBase {
     Assert.assertEquals(125.45f, (float) row2.get("BINARY_FLOAT_COL"), 0.000001);
     Assert.assertEquals(124.45, row1.get("BINARY_DOUBLE_COL"), 0.000001);
     Assert.assertEquals(125.45, row2.get("BINARY_DOUBLE_COL"), 0.000001);
+  }
+
+  @Test
+  public void testDbSourceLongColumn() throws Exception {
+    String importQuery = "SELECT VARCHAR_COL, LONG_COL FROM " + MY_TABLE_FOR_LONG +
+      " WHERE SMALLINT_COL < 3 AND $CONDITIONS";
+    String boundingQuery = "SELECT MIN(SMALLINT_COL),MAX(SMALLINT_COL) from " + MY_TABLE_FOR_LONG;
+    String splitBy = "SMALLINT_COL";
+    ETLPlugin sourceConfig = new ETLPlugin(
+      OracleConstants.PLUGIN_NAME,
+      BatchSource.PLUGIN_TYPE,
+      ImmutableMap.<String, String>builder()
+        .putAll(BASE_PROPS)
+        .put(OracleConstants.DEFAULT_ROW_PREFETCH, "40")
+        .put(AbstractDBSource.DBSourceConfig.IMPORT_QUERY, importQuery)
+        .put(AbstractDBSource.DBSourceConfig.BOUNDING_QUERY, boundingQuery)
+        .put(AbstractDBSource.DBSourceConfig.SPLIT_BY, splitBy)
+        .put(Constants.Reference.REFERENCE_NAME, "DBSourceLongTest")
+        .build(),
+      null
+    );
+
+    String outputDatasetName = "output-dbsourcetest-long";
+    ETLPlugin sinkConfig = MockSink.getPlugin(outputDatasetName);
+
+    ApplicationManager appManager = deployETL(sourceConfig, sinkConfig,
+                                              DATAPIPELINE_ARTIFACT, "testDBSourceLong");
+    runETLOnce(appManager);
+
+    DataSetManager<Table> outputManager = getDataset(outputDatasetName);
+    List<StructuredRecord> outputRecords = MockSink.readOutput(outputManager);
+
+    Assert.assertEquals(2, outputRecords.size());
+    String userid = outputRecords.get(0).get("VARCHAR_COL");
+    StructuredRecord row1 = "user1".equals(userid) ? outputRecords.get(0) : outputRecords.get(1);
+    StructuredRecord row2 = "user1".equals(userid) ? outputRecords.get(1) : outputRecords.get(0);
+
+    // Verify data
+    Assert.assertEquals("user1", row1.get("LONG_COL").toString().trim());
+    Assert.assertEquals("user2", row2.get("LONG_COL").toString().trim());
   }
 
   @Test
