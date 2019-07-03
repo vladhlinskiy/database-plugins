@@ -123,7 +123,6 @@ public class OracleDBRecord extends DBRecord {
       case Types.NUMERIC:
         // This is the only way to differentiate FLOAT/REAL columns from other numeric columns, that based on NUMBER.
         // Since FLOAT is a subtype of the NUMBER data type, 'getColumnType' and 'getColumnTypeName' can not be used.
-        // 'scale' also can not be used in this case since it's value reported as '-127'.
         if (Double.class.getTypeName().equals(resultSet.getMetaData().getColumnClassName(columnIndex))) {
           recordBuilder.set(field.getName(), resultSet.getDouble(columnIndex));
         } else {

@@ -45,6 +45,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.BiConsumer;
 
+import static io.cdap.plugin.db.DatabasePluginTestUtil.assertBytesEquals;
+import static io.cdap.plugin.db.DatabasePluginTestUtil.assertNumericEquals;
+import static io.cdap.plugin.db.DatabasePluginTestUtil.assertObjectEquals;
+
 /**
  * Test for ETL using databases.
  */
@@ -383,8 +387,8 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
                     new BigDecimal(Long.MAX_VALUE, new MathContext(DEFAULT_PRECISION))
                       .setScale(0)
                       .add(new BigDecimal(Long.MAX_VALUE)))
-        .setTimestamp("DATE_COL", localDateTime.atZone(UTC_ZONE))
-        .setTimestamp("TIMESTAMP_COL", localDateTime.atZone(UTC_ZONE))
+        .setTimestamp("DATE_COL", localDateTime.atZone(UTC))
+        .setTimestamp("TIMESTAMP_COL", localDateTime.atZone(UTC))
         .set("INTERVAL_YEAR_TO_MONTH_COL", "300-5")
         .set("INTERVAL_DAY_TO_SECOND_COL", "23 3:02:10")
         .set("RAW_COL", name.getBytes())
@@ -421,8 +425,8 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
         .set("NUMBER_COL", 3.456d)
         .set("NUMERIC_COL", 3.457d)
         .set("SMALLINT_COL", Long.MAX_VALUE) // SMALLINT is actually NUMBER(38, 0)
-        .setTimestamp("DATE_COL", localDateTime.atZone(UTC_ZONE))
-        .setTimestamp("TIMESTAMP_COL", localDateTime.atZone(UTC_ZONE))
+        .setTimestamp("DATE_COL", localDateTime.atZone(UTC))
+        .setTimestamp("TIMESTAMP_COL", localDateTime.atZone(UTC))
         .set("INTERVAL_YEAR_TO_MONTH_COL", "300-5")
         .set("INTERVAL_DAY_TO_SECOND_COL", "23 3:02:10")
         .set("RAW_COL", name.getBytes())
