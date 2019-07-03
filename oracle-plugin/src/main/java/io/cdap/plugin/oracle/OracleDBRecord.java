@@ -26,6 +26,7 @@ import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.time.Instant;
@@ -54,6 +55,35 @@ public class OracleDBRecord extends DBRecord {
     return new OracleSchemaReader();
   }
 
+  /**
+   * Builds the {@link #record} using the specified {@link ResultSet} for Oracle DB
+   *
+   * @param resultSet the {@link ResultSet} to build the {@link StructuredRecord} from
+   */
+  @Override
+  public void readFields(ResultSet resultSet) throws SQLException {
+    Schema schema = getSchema();
+    ResultSetMetaData metadata = resultSet.getMetaData();
+    StructuredRecord.Builder recordBuilder = StructuredRecord.builder(schema);
+
+    // All LONG or LONG RAW columns have to be retrieved from the ResultSet prior to all the other columns.
+    // Otherwise, we will face java.sql.SQLException: Stream has already been closed
+    for (int i = 0; i < schema.getFields().size(); i++) {
+      if (isLongOrLongRaw(metadata.getColumnType(i + 1))) {
+        readField(i, metadata, resultSet, schema, recordBuilder);
+      }
+    }
+
+    // Read fields of other types
+    for (int i = 0; i < schema.getFields().size(); i++) {
+      if (!isLongOrLongRaw(metadata.getColumnType(i + 1))) {
+        readField(i, metadata, resultSet, schema, recordBuilder);
+      }
+    }
+
+    record = recordBuilder.build();
+  }
+
   @Override
   protected void handleField(ResultSet resultSet, StructuredRecord.Builder recordBuilder, Schema.Field field,
                              int columnIndex, int sqlType, int sqlPrecision, int sqlScale) throws SQLException {
@@ -70,6 +100,7 @@ public class OracleDBRecord extends DBRecord {
     switch (sqlType) {
       case OracleSchemaReader.INTERVAL_YM:
       case OracleSchemaReader.INTERVAL_DS:
+      case OracleSchemaReader.LONG:
       case Types.NCLOB:
         recordBuilder.set(field.getName(), resultSet.getString(columnIndex));
         break;
@@ -85,6 +116,7 @@ public class OracleDBRecord extends DBRecord {
         recordBuilder.set(field.getName(), canonicalFormatBytesToDouble(resultSet.getBytes(columnIndex)));
         break;
       case OracleSchemaReader.BFILE:
+      case OracleSchemaReader.LONG_RAW:
         recordBuilder.set(field.getName(), resultSet.getBytes(columnIndex));
         break;
       case Types.DECIMAL:
@@ -101,6 +133,21 @@ public class OracleDBRecord extends DBRecord {
           recordBuilder.setDecimal(field.getName(), decimal);
         }
     }
+  }
+
+  private boolean isLongOrLongRaw(int columnType) {
+    return columnType == OracleSchemaReader.LONG || columnType == OracleSchemaReader.LONG_RAW;
+  }
+
+  private void readField(int index, ResultSetMetaData metadata, ResultSet resultSet, Schema schema,
+                         StructuredRecord.Builder recordBuilder) throws SQLException {
+    Schema.Field field = schema.getFields().get(index);
+    int columnIndex = index + 1;
+    int sqlType = metadata.getColumnType(columnIndex);
+    int sqlPrecision = metadata.getPrecision(columnIndex);
+    int sqlScale = metadata.getScale(columnIndex);
+
+    handleField(resultSet, recordBuilder, field, columnIndex, sqlType, sqlPrecision, sqlScale);
   }
 
   @Override

@@ -114,7 +114,7 @@ public class DBRecord implements Writable, DBWritable, Configurable {
     record = recordBuilder.build();
   }
 
-  private Schema getSchema() {
+  protected Schema getSchema() {
     return schema.getOrCompute();
   }
 
