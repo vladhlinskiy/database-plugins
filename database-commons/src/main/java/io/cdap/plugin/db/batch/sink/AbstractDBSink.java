@@ -83,7 +83,7 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
   protected int[] columnTypes;
   protected List<String> columns;
   protected String dbColumns;
-  protected Schema outputSchema;
+  private Schema outputSchema;
 
   public AbstractDBSink(DBSinkConfig dbSinkConfig) {
     super(new ReferencePluginConfig(dbSinkConfig.referenceName));
@@ -209,31 +209,11 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
 
   @Override
   public void transform(StructuredRecord input, Emitter<KeyValue<DBRecord, NullWritable>> emitter) {
-    // Create StructuredRecord that only has the columns in this.columns
-    List<Schema.Field> outputFields = new ArrayList<>();
-    for (Schema.Field field : input.getSchema().getFields()) {
-      Preconditions.checkArgument(columns.contains(field.getName()), "Input field '%s' is not found in columns",
-                                  field.getName());
-      outputFields.add(field);
-    }
-    StructuredRecord.Builder output = StructuredRecord.builder(outputSchema);
-    for (int i = 0; i < columns.size(); i++) {
-      transformField(input, i, output);
-    }
-
-    emitter.emit(new KeyValue<>(getDBRecord(output), null));
+    emitter.emit(new KeyValue<>(getDBRecord(input), null));
   }
 
-  /**
-   * Allows to customize the way how a single field set on the transform output.
-   */
-  protected void transformField(StructuredRecord input, int index, StructuredRecord.Builder output) {
-    String fieldName = columns.get(index);
-    output.set(fieldName, input.get(fieldName));
-  }
-
-  protected DBRecord getDBRecord(StructuredRecord.Builder output) {
-    return new DBRecord(output.build(), columnTypes);
+  protected DBRecord getDBRecord(StructuredRecord output) {
+    return new DBRecord(output, columnTypes, columns);
   }
 
   protected SchemaReader getSchemaReader() {

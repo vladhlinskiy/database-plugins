@@ -23,14 +23,15 @@ import io.cdap.plugin.db.SchemaReader;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.List;
 
 /**
  * Writable class for Aurora DB PostgreSQL Source/Sink
  */
 public class AuroraPostgresDBRecord extends DBRecord {
 
-  public AuroraPostgresDBRecord(StructuredRecord record, int[] columnTypes) {
-    super(record, columnTypes);
+  public AuroraPostgresDBRecord(StructuredRecord record, int[] columnTypes, List<String> columns) {
+    super(record, columnTypes, columns);
   }
 
   /**
