@@ -108,14 +108,13 @@ public class OracleSchemaReader extends CommonSchemaReader {
       return Objects.equals(inputFieldNonNullableSchema.getType(), outputFieldNonNullableSchema.getType());
     }
 
-    // Handle the case when output schema expects Decimal Logical Type but we got valid primitive.
-    // This allows primitive values to be converted into corresponding instances of
-    // BigDecimal(honoring scale and precision)
+    // Handle the case when output schema expects decimal logical type but we got valid primitive.
+    // It's safe to write primitives as values of decimal logical type in the case of valid precision.
     if (Schema.LogicalType.DECIMAL == outputFieldNonNullableSchema.getLogicalType()) {
       int precision = metadata.getPrecision(index);
       switch (inputFieldNonNullableSchema.getType()) {
         case INT:
-          // With 10 digits we can represent Integer.MAX_VALUE so it's safe to w
+          // With 10 digits we can represent Integer.MAX_VALUE.
           // It is equal to the value returned by (new BigDecimal(Integer.MAX_VALUE)).precision()
           return precision >= 10;
         case LONG:

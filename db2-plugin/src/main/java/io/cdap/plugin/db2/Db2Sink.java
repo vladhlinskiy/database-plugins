@@ -61,8 +61,8 @@ public class Db2Sink extends AbstractDBSink {
   }
 
   @Override
-  protected DBRecord getDBRecord(StructuredRecord.Builder output) {
-    return new DB2Record(output.build(), columnTypes);
+  protected DBRecord getDBRecord(StructuredRecord output) {
+    return new DB2Record(output, columnTypes, columns);
   }
 
   @Override

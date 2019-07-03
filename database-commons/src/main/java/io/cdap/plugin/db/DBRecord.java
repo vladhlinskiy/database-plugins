@@ -66,13 +66,19 @@ public class DBRecord implements Writable, DBWritable, Configurable {
   protected int[] columnTypes;
 
   /**
+   * Need to cache column names to set fields of the input record on {@link PreparedStatement} in the right order.
+   */
+  protected List<String> columns;
+
+  /**
    * Used to construct a DBRecord from a StructuredRecord in the ETL Pipeline
    *
    * @param record the {@link StructuredRecord} to construct the {@link DBRecord} from
    */
-  public DBRecord(StructuredRecord record, int[] columnTypes) {
+  public DBRecord(StructuredRecord record, int[] columnTypes, List<String> columns) {
     this.record = record;
     this.columnTypes = columnTypes;
+    this.columns = columns;
   }
 
   /**
@@ -202,14 +208,19 @@ public class DBRecord implements Writable, DBWritable, Configurable {
    * @param stmt the {@link PreparedStatement} to write the {@link StructuredRecord} to
    */
   public void write(PreparedStatement stmt) throws SQLException {
-    Schema recordSchema = record.getSchema();
-    List<Schema.Field> schemaFields = recordSchema.getFields();
-    for (int i = 0; i < schemaFields.size(); i++) {
-      writeToDB(stmt, schemaFields.get(i), i);
+    for (int i = 0; i < columns.size(); i++) {
+      Schema.Field field = record.getSchema().getField(columns.get(i));
+      if (field != null) {
+        writeToDB(stmt, field, i);
+      } else {
+        // Some of the fields can be absent in the record
+        int sqlIndex = i + 1;
+        stmt.setNull(sqlIndex, columnTypes[i]);
+      }
     }
   }
 
-  protected Schema getNonNullableSchema(Schema.Field field) {
+  private Schema getNonNullableSchema(Schema.Field field) {
     Schema schema = field.getSchema();
     if (field.getSchema().isNullable()) {
       schema = field.getSchema().getNonNullable();
@@ -264,7 +275,7 @@ public class DBRecord implements Writable, DBWritable, Configurable {
     }
   }
 
-  protected void writeToDB(PreparedStatement stmt, Schema.Field field, int fieldIndex) throws SQLException {
+  private void writeToDB(PreparedStatement stmt, Schema.Field field, int fieldIndex) throws SQLException {
     String fieldName = field.getName();
     Schema fieldSchema = getNonNullableSchema(field);
     Schema.Type fieldType = fieldSchema.getType();

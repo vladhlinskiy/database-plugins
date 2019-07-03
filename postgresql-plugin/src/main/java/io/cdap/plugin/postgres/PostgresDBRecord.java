@@ -23,14 +23,15 @@ import io.cdap.plugin.db.SchemaReader;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.List;
 
 /**
  * Writable class for PostgreSQL Source/Sink
  */
 public class PostgresDBRecord extends DBRecord {
 
-  public PostgresDBRecord(StructuredRecord record, int[] columnTypes) {
-    super(record, columnTypes);
+  public PostgresDBRecord(StructuredRecord record, int[] columnTypes, List<String> columns) {
+    super(record, columnTypes, columns);
   }
 
   /**
