@@ -67,7 +67,8 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
     Schema.Field.of("NCLOB_COL", Schema.of(Schema.Type.STRING)),
     Schema.Field.of("BLOB_COL", Schema.of(Schema.Type.BYTES)),
     Schema.Field.of("FLOAT_COL", Schema.of(Schema.Type.DOUBLE)),
-    Schema.Field.of("REAL_COL", Schema.of(Schema.Type.DOUBLE))
+    Schema.Field.of("REAL_COL", Schema.of(Schema.Type.DOUBLE)),
+    Schema.Field.of("LONG_RAW_COL", Schema.of(Schema.Type.BYTES))
   );
 
   /**
@@ -115,9 +116,21 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
       .build()
   );
 
+  public static final Schema LONG_COLUMN_SCHEMA = Schema.recordOf(
+    "dbRecord",
+    ImmutableList.<Schema.Field>builder()
+      .add(Schema.Field.of("ID", Schema.of(Schema.Type.INT)))
+      .add(Schema.Field.of("SMALLINT_COL", Schema.of(Schema.Type.LONG)))
+      .add(Schema.Field.of("VARCHAR_COL", Schema.of(Schema.Type.STRING)))
+      .add(Schema.Field.of("LONG_COL", Schema.of(Schema.Type.STRING)))
+      .build()
+  );
+
   private static final BiConsumer<StructuredRecord, ResultSet> COMPARE_COMMON = (expected, actual) -> {
     try {
       // Verify data
+      assertBytesEquals(expected.get("LONG_RAW_COL"), actual.getBytes("LONG_RAW_COL"));
+
       assertNumericEquals(expected.get("FLOAT_COL"), actual.getDouble("FLOAT_COL"));
       assertNumericEquals(expected.get("REAL_COL"), actual.getDouble("REAL_COL"));
 
@@ -178,6 +191,16 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
     }
   };
 
+  private static final BiConsumer<StructuredRecord, ResultSet> COMPARE_LONG_COLUMN = (expected, actual) -> {
+    try {
+      // Verify data
+      assertObjectEquals(expected.get("LONG_COL"), actual.getString("LONG_COL").trim());
+    } catch (SQLException e) {
+      e.printStackTrace();
+      Assert.fail(e.getMessage());
+    }
+  };
+
   @Before
   public void setup() throws Exception {
     try (Connection connection = createConnection();
@@ -204,32 +227,40 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
          Statement stmt = conn.createStatement();
          ResultSet resultSet = stmt.executeQuery("SELECT * FROM MY_DEST_TABLE")) {
       testInvalidDataWrite(resultSet, stringColumnName);
-
     }
   }
 
   @Test
   public void testDBSinkWithExplicitInputSchema() throws Exception {
-    testSink("testDBSinkWithExplicitInputSchema", "explicit", DECIMAL_SCHEMA, createInputData(),
-             Arrays.asList(COMPARE_DECIMALS, COMPARE_COMMON));
+    testSink("testDBSinkWithExplicitInputSchema", "explicit", MY_DEST_TABLE, DECIMAL_SCHEMA,
+             createInputData(), Arrays.asList(COMPARE_DECIMALS, COMPARE_COMMON));
   }
 
   @Test
   public void testDBSinkWithInferredInputSchema() throws Exception {
-    testSink("testDBSinkWithInferredInputSchema", "inferred", null, createInputData(),
-             Arrays.asList(COMPARE_DECIMALS, COMPARE_COMMON));
+    testSink("testDBSinkWithInferredInputSchema", "inferred", MY_DEST_TABLE, null,
+             createInputData(), Arrays.asList(COMPARE_DECIMALS, COMPARE_COMMON));
   }
 
   @Test
   public void testDBSinkPrimitiveToDecimalWithExplicitSchema() throws Exception {
     testSink("testDBSinkPrimitiveToDecimalWithExplicitSchema", "primitive-explicit",
-             PRIMITIVE_SCHEMA, createPrimitivesInputData(), Arrays.asList(COMPARE_PRIMITIVES, COMPARE_COMMON));
+             MY_DEST_TABLE, PRIMITIVE_SCHEMA, createPrimitivesInputData(), Arrays.asList(COMPARE_PRIMITIVES,
+                                                                                         COMPARE_COMMON));
   }
 
   @Test
   public void testDBSinkPrimitiveToDecimalInferredInputSchema() throws Exception {
     testSink("testDBSinkPrimitiveToDecimalInferredInputSchema", "primitive-inferred",
-             null, createPrimitivesInputData(), Arrays.asList(COMPARE_PRIMITIVES, COMPARE_COMMON));
+             MY_DEST_TABLE, null, createPrimitivesInputData(), Arrays.asList(COMPARE_PRIMITIVES,
+                                                                             COMPARE_COMMON));
+  }
+
+  @Test
+  public void testDBSinkLongColumn() throws Exception {
+    testSink("testDBSinkLongColumn", "long-column",
+             MY_DEST_TABLE_FOR_LONG, null, createLongColumnInputData(),
+             Collections.singletonList(COMPARE_LONG_COLUMN));
   }
 
   @Test
@@ -246,7 +277,7 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
     };
 
     testSink("testDBSinkSingleFieldInferredInputSchema", "single-field-inferred",
-             null, Collections.singletonList(record), Collections.singletonList(test));
+             MY_DEST_TABLE, null, Collections.singletonList(record), Collections.singletonList(test));
   }
 
   @Test
@@ -262,12 +293,13 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
       }
     };
 
-    testSink("testDBSinkSingleFieldExplicitInputSchema", "single-field-explicit",
+    testSink("testDBSinkSingleFieldExplicitInputSchema", "single-field-explicit", MY_DEST_TABLE,
              schema, Collections.singletonList(record), Collections.singletonList(test));
   }
 
   private void testSink(String appName,
                         String inputDatasetName,
+                        String tableName,
                         Schema schema,
                         List<StructuredRecord> inputRecords,
                         List<BiConsumer<StructuredRecord, ResultSet>> testActions) throws Exception {
@@ -279,12 +311,11 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
 
     deployETL(sourceConfig, sinkConfig, DATAPIPELINE_ARTIFACT, appName);
 
-
     try (Connection conn = createConnection();
-    Statement stmt = conn.createStatement();
-    ResultSet actual = stmt.executeQuery("SELECT * FROM MY_DEST_TABLE ORDER BY ID")) {
+         Statement stmt = conn.createStatement();
+         ResultSet actual = stmt.executeQuery("SELECT * FROM " + tableName + " ORDER BY ID")) {
 
-      for (StructuredRecord expected: inputRecords) {
+      for (StructuredRecord expected : inputRecords) {
         Assert.assertTrue(actual.next());
         // Perform supplied test actions
         testActions.forEach(test -> test.accept(expected, actual));
@@ -359,7 +390,8 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
         .set("RAW_COL", name.getBytes())
         .set("BLOB_COL", name.getBytes())
         .set("FLOAT_COL", 3.14d)
-        .set("REAL_COL", 3.14d);
+        .set("REAL_COL", 3.14d)
+        .set("LONG_RAW_COL", name.getBytes());
 
       inputRecords.add(builder.build());
     }
@@ -396,7 +428,24 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
         .set("RAW_COL", name.getBytes())
         .set("BLOB_COL", name.getBytes())
         .set("FLOAT_COL", 3.14d)
-        .set("REAL_COL", 3.14d);
+        .set("REAL_COL", 3.14d)
+        .set("LONG_RAW_COL", name.getBytes());
+
+      inputRecords.add(builder.build());
+    }
+
+    return inputRecords;
+  }
+
+  private List<StructuredRecord> createLongColumnInputData() throws Exception {
+    List<StructuredRecord> inputRecords = new ArrayList<>();
+    for (int i = 1; i <= 2; i++) {
+      String name = "user" + i;
+      StructuredRecord.Builder builder = StructuredRecord.builder(LONG_COLUMN_SCHEMA)
+        .set("ID", i)
+        .set("SMALLINT_COL", Long.MAX_VALUE) // SMALLINT is actually NUMBER(38, 0)
+        .set("VARCHAR_COL", name)
+        .set("LONG_COL", name);
 
       inputRecords.add(builder.build());
     }

@@ -61,6 +61,12 @@ public class OraclePluginTestBase extends DatabasePluginTestBase {
 
   protected static final String JDBC_DRIVER_NAME = "oracle";
 
+  protected static final String MY_TABLE = "my_table";
+  protected static final String MY_DEST_TABLE = "MY_DEST_TABLE";
+  protected static final String YOUR_TABLE = "your_table";
+  protected static final String MY_TABLE_FOR_LONG = "my_table_long";
+  protected static final String MY_DEST_TABLE_FOR_LONG = "MY_DEST_LONG";
+
   protected static String connectionUrl;
   protected static final int YEAR;
   protected static final int DEFAULT_PRECISION = 38;
@@ -141,7 +147,7 @@ public class OraclePluginTestBase extends DatabasePluginTestBase {
       // create a table that the action will truncate at the end of the run
       stmt.execute("CREATE TABLE postActionTest (x int, day varchar(10))");
 
-      stmt.execute("CREATE TABLE my_table (" +
+      String createTableFormat = "CREATE TABLE %s (" +
                      "  ID INT NOT NULL, " +
                      "  CHAR_COL CHAR(10)," +
                      "  NCHAR_COL NCHAR(10)," +
@@ -169,32 +175,47 @@ public class OraclePluginTestBase extends DatabasePluginTestBase {
                      "  NCLOB_COL NCLOB," +
                      "  FLOAT_COL FLOAT," + // FLOAT(126), value is represented internally as NUMBER.
                      "  BINARY_FLOAT_COL BINARY_FLOAT," +
-                     "  BINARY_DOUBLE_COL BINARY_DOUBLE" +
-                     ")");
-      stmt.execute("CREATE TABLE MY_DEST_TABLE AS " +
-                     "SELECT * FROM my_table");
-      stmt.execute("CREATE TABLE your_table AS " +
-                     "SELECT * FROM my_table");
+                     "  BINARY_DOUBLE_COL BINARY_DOUBLE," +
+                     "  LONG_RAW_COL LONG RAW" +
+                     ")";
+
+      String createTableWithLongFormat = "CREATE TABLE %s (" +
+                     "  ID INT NOT NULL, " +
+                     "  SMALLINT_COL SMALLINT," + // synonym for NUMBER(38,0)
+                     "  VARCHAR_COL VARCHAR(10)," +
+                     "  LONG_COL LONG" +
+                     ")";
+
+      stmt.execute(String.format(createTableFormat, MY_TABLE));
+      stmt.execute(String.format(createTableFormat, MY_DEST_TABLE));
+      stmt.execute(String.format(createTableFormat, YOUR_TABLE));
+
+      stmt.execute(String.format(createTableWithLongFormat, MY_TABLE_FOR_LONG));
+      stmt.execute(String.format(createTableWithLongFormat, MY_DEST_TABLE_FOR_LONG));
     }
   }
 
   protected static void prepareTestData(Connection conn) throws Exception {
 
+    String insertTableFormat = "INSERT INTO %s " +
+      "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?," +
+      "       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
     try (
       Statement stmt = conn.createStatement();
       PreparedStatement pStmt1 =
-        conn.prepareStatement("INSERT INTO my_table " +
-                                "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?," +
-                                "       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        conn.prepareStatement(String.format(insertTableFormat, MY_TABLE));
       PreparedStatement pStmt2 =
-        conn.prepareStatement("INSERT INTO your_table " +
-                                "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?," +
-                                "       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
+        conn.prepareStatement(String.format(insertTableFormat, YOUR_TABLE));
+
+      PreparedStatement pStmt3 =
+        conn.prepareStatement("INSERT INTO my_table_long VALUES(?, ?, ?, ?)")) {
 
       stmt.execute("insert into dbActionTest values (1, '1970-01-01')");
       stmt.execute("insert into postActionTest values (1, '1970-01-01')");
 
       populateData(pStmt1, pStmt2);
+      populateDataLong(pStmt3);
     }
   }
 
@@ -243,6 +264,8 @@ public class OraclePluginTestBase extends DatabasePluginTestBase {
           pStmt.setObject(27, createBinaryFloatObject((float) 123.45 + i));
           pStmt.setObject(28, createBinaryDoubleObject(123.45 + i));
 
+          pStmt.setBytes(29, name.getBytes());
+
           pStmt.executeUpdate();
         } finally {
           if (Objects.nonNull(clob)) {
@@ -254,6 +277,18 @@ public class OraclePluginTestBase extends DatabasePluginTestBase {
           }
         }
       }
+    }
+  }
+
+  private static void populateDataLong(PreparedStatement pStmt) throws SQLException {
+    for (int i = 1; i <= 5; i++) {
+      String name = "user" + i;
+      pStmt.setInt(1, i);
+      pStmt.setInt(2, i);
+      pStmt.setString(3, name);
+      pStmt.setObject(4, name);
+
+      pStmt.executeUpdate();
     }
   }
 
@@ -289,13 +324,17 @@ public class OraclePluginTestBase extends DatabasePluginTestBase {
       return;
     }
 
+    String dropTableFormat = "DROP TABLE %s";
+
     try (Connection conn = createConnection();
          Statement stmt = conn.createStatement()) {
-      stmt.execute("DROP TABLE my_table");
-      stmt.execute("DROP TABLE your_table");
-      stmt.execute("DROP TABLE postActionTest");
-      stmt.execute("DROP TABLE dbActionTest");
-      stmt.execute("DROP TABLE MY_DEST_TABLE");
+      stmt.execute(String.format(dropTableFormat, MY_TABLE));
+      stmt.execute(String.format(dropTableFormat, MY_TABLE_FOR_LONG));
+      stmt.execute(String.format(dropTableFormat, YOUR_TABLE));
+      stmt.execute(String.format(dropTableFormat, "postActionTest"));
+      stmt.execute(String.format(dropTableFormat, "dbActionTest"));
+      stmt.execute(String.format(dropTableFormat, MY_DEST_TABLE));
+      stmt.execute(String.format(dropTableFormat, MY_DEST_TABLE_FOR_LONG));
     }
   }
 }
