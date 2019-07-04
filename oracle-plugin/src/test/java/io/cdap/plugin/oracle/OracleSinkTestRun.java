@@ -45,9 +45,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.BiConsumer;
 
-import static io.cdap.plugin.db.DatabasePluginTestUtil.assertBytesEquals;
-import static io.cdap.plugin.db.DatabasePluginTestUtil.assertNumericEquals;
-import static io.cdap.plugin.db.DatabasePluginTestUtil.assertObjectEquals;
+import static io.cdap.plugin.db.CustomAssertions.assertBytesEquals;
+import static io.cdap.plugin.db.CustomAssertions.assertNumericEquals;
+import static io.cdap.plugin.db.CustomAssertions.assertObjectEquals;
 
 /**
  * Test for ETL using databases.
