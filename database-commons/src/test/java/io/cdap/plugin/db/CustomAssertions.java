@@ -18,6 +18,8 @@ package io.cdap.plugin.db;
 
 import org.junit.Assert;
 
+import java.util.Arrays;
+
 /**
  * Test util methods for custom assertions.
  */
@@ -27,7 +29,7 @@ public final class CustomAssertions {
    * The maximum delta between expected and actual floating point number for which both numbers are still considered
    * equal.
    */
-  public static final double DELTA = 0.000001;
+  public static final double DELTA = 0.01;
 
   private CustomAssertions() {
     throw new AssertionError("Should not instantiate static utility class.");
@@ -43,6 +45,25 @@ public final class CustomAssertions {
    */
   public static void assertObjectEquals(Object expected, Object actual) {
     Assert.assertEquals(expected, actual);
+  }
+
+  /**
+   * Reuses {@link Assert#assertArrayEquals(byte[], byte[])}.
+   * Asserts that values of two byte arrays are equal for the length of the expected one, since it's common that actual
+   * arrays are larger. If values are not equal size of actual array is less than size of expected,
+   * an {@link AssertionError} is thrown.
+   *
+   * @param expected byte array with expected values.
+   * @param actual   byte array with actual values
+   */
+  public static void assertBytesEquals(byte[] expected, byte[] actual) {
+    // handle the case when 'null' values passed
+    if (expected == null || actual == null) {
+      Assert.assertEquals(expected, actual);
+    } else {
+      Assert.assertTrue(actual.length >= expected.length);
+      Assert.assertArrayEquals(expected, Arrays.copyOf(actual, expected.length));
+    }
   }
 
   /**
