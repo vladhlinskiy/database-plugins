@@ -72,6 +72,8 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
     Schema.Field.of("BLOB_COL", Schema.of(Schema.Type.BYTES)),
     Schema.Field.of("FLOAT_COL", Schema.of(Schema.Type.DOUBLE)),
     Schema.Field.of("REAL_COL", Schema.of(Schema.Type.DOUBLE)),
+    Schema.Field.of("BINARY_FLOAT_COL", Schema.of(Schema.Type.FLOAT)),
+    Schema.Field.of("BINARY_DOUBLE_COL", Schema.of(Schema.Type.DOUBLE)),
     Schema.Field.of("LONG_RAW_COL", Schema.of(Schema.Type.BYTES)),
     Schema.Field.of("ROWID_COL", Schema.of(Schema.Type.STRING)),
     Schema.Field.of("UROWID_COL", Schema.of(Schema.Type.STRING))
@@ -141,6 +143,8 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
 
       assertNumericEquals(expected.get("FLOAT_COL"), actual.getDouble("FLOAT_COL"));
       assertNumericEquals(expected.get("REAL_COL"), actual.getDouble("REAL_COL"));
+      assertNumericEquals(expected.get("BINARY_FLOAT_COL"), actual.getFloat("BINARY_FLOAT_COL"));
+      assertNumericEquals(expected.get("BINARY_DOUBLE_COL"), actual.getDouble("BINARY_DOUBLE_COL"));
 
       assertObjectEquals(expected.get("CHAR_COL"), actual.getString("CHAR_COL").trim());
       assertObjectEquals(expected.get("NCHAR_COL"), actual.getString("NCHAR_COL").trim());
@@ -402,6 +406,8 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
         .set("FLOAT_COL", 3.14d)
         .set("REAL_COL", 3.14d)
         .set("LONG_RAW_COL", name.getBytes())
+        .set("BINARY_FLOAT_COL", 3.14f)
+        .set("BINARY_DOUBLE_COL", 3.14d)
         .set("ROWID_COL", "AAAUEVAAFAAAAR/AA" + i)
         .set("UROWID_COL", "AAAUEVAAFAAAAR/AA" + i);
 
@@ -442,6 +448,8 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
         .set("FLOAT_COL", 3.14d)
         .set("REAL_COL", 3.14d)
         .set("LONG_RAW_COL", name.getBytes())
+        .set("BINARY_FLOAT_COL", 3.14f)
+        .set("BINARY_DOUBLE_COL", 3.14d)
         .set("ROWID_COL", "AAAUEVAAFAAAAR/AA" + i)
         .set("UROWID_COL", "AAAUEVAAFAAAAR/AA" + i);
 

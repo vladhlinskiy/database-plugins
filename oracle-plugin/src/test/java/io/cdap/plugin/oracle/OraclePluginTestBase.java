@@ -34,7 +34,6 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 
-import java.lang.reflect.InvocationTargetException;
 import java.math.BigDecimal;
 import java.sql.Clob;
 import java.sql.Connection;
@@ -263,8 +262,8 @@ public class OraclePluginTestBase extends DatabasePluginTestBase {
           pStmt.setNClob(25, nClob);
 
           pStmt.setFloat(26, (float) 123.45 + i);
-          pStmt.setObject(27, createBinaryFloatObject((float) 123.45 + i));
-          pStmt.setObject(28, createBinaryDoubleObject(123.45 + i));
+          pStmt.setFloat(27, (float) 123.45 + i);
+          pStmt.setDouble(28, 123.45 + i);
 
           pStmt.setBytes(29, name.getBytes());
           pStmt.setString(30, "AAAUEVAAFAAAAR/AA" + i);
@@ -304,22 +303,6 @@ public class OraclePluginTestBase extends DatabasePluginTestBase {
     } catch (Exception e) {
       throw Throwables.propagate(e);
     }
-  }
-
-  private static Object createBinaryFloatObject(float value) throws ClassNotFoundException, NoSuchMethodException,
-    InvocationTargetException, InstantiationException, IllegalAccessException {
-    return createOracleBinaryObject("oracle.sql.BINARY_FLOAT", value);
-  }
-
-  private static Object createBinaryDoubleObject(double value) throws ClassNotFoundException, NoSuchMethodException,
-    InvocationTargetException, InstantiationException, IllegalAccessException {
-    return createOracleBinaryObject("oracle.sql.BINARY_DOUBLE", value);
-  }
-
-  private static Object createOracleBinaryObject(String className, Object value) throws ClassNotFoundException,
-    NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException {
-    Class<?> binaryClass = Class.forName(className);
-    return binaryClass.getConstructor(value.getClass()).newInstance(value);
   }
 
   @AfterClass

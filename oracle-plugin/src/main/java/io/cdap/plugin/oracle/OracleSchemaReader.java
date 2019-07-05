@@ -101,13 +101,6 @@ public class OracleSchemaReader extends CommonSchemaReader {
     Schema inputFieldNonNullableSchema = field.getSchema().isNullable()
       ? field.getSchema().getNonNullable()
       : field.getSchema();
-
-    // This is the only way to differentiate FLOAT/REAL columns from other numeric columns, that based on NUMBER.
-    // Since FLOAT is a subtype of the NUMBER data type, 'getColumnType' and 'getColumnTypeName' can not be used.
-    if (Double.class.getTypeName().equals(metadata.getColumnClassName(index))) {
-      return Objects.equals(inputFieldNonNullableSchema.getType(), outputFieldNonNullableSchema.getType());
-    }
-
     // Handle the case when output schema expects decimal logical type but we got valid primitive.
     // It's safe to write primitives as values of decimal logical type in the case of valid precision.
     if (Schema.LogicalType.DECIMAL == outputFieldNonNullableSchema.getLogicalType()) {
@@ -128,6 +121,9 @@ public class OracleSchemaReader extends CommonSchemaReader {
         default:
           return super.isTypeCompatible(field, metadata, index);
       }
+    } else if (ORACLE_TYPES.contains(metadata.getColumnType(index))) {
+      return Objects.equals(inputFieldNonNullableSchema.getType(), outputFieldNonNullableSchema.getType()) &&
+        Objects.equals(inputFieldNonNullableSchema.getLogicalType(), outputFieldNonNullableSchema.getLogicalType());
     } else {
       return super.isTypeCompatible(field, metadata, index);
     }
