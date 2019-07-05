@@ -112,10 +112,10 @@ public class OracleDBRecord extends DBRecord {
         recordBuilder.setTimestamp(field.getName(), instant.atZone(ZoneId.ofOffset("UTC", ZoneOffset.UTC)));
         break;
       case OracleSchemaReader.BINARY_FLOAT:
-        recordBuilder.set(field.getName(), canonicalFormatBytesToFloat(resultSet.getBytes(columnIndex)));
+        recordBuilder.set(field.getName(), resultSet.getFloat(columnIndex));
         break;
       case OracleSchemaReader.BINARY_DOUBLE:
-        recordBuilder.set(field.getName(), canonicalFormatBytesToDouble(resultSet.getBytes(columnIndex)));
+        recordBuilder.set(field.getName(), resultSet.getDouble(columnIndex));
         break;
       case OracleSchemaReader.BFILE:
       case OracleSchemaReader.LONG_RAW:
@@ -157,67 +157,5 @@ public class OracleDBRecord extends DBRecord {
     byte[] byteValue = fieldValue instanceof ByteBuffer ? Bytes.toBytes((ByteBuffer) fieldValue) : (byte[]) fieldValue;
     // handles BINARY, VARBINARY and LOGVARBINARY
     stmt.setBytes(sqlIndex, byteValue);
-  }
-
-  private static float canonicalFormatBytesToFloat(byte[] binaryArray) {
-    // BINARY_FLOAT value requires 4 bytes.
-    int b0 = (int) binaryArray[0];
-    int b1 = (int) binaryArray[1];
-    int b2 = (int) binaryArray[2];
-    int b3 = (int) binaryArray[3];
-
-    if ((b0 & 128) != 0) {
-      b0 &= 127;
-      b1 &= 255;
-      b2 &= 255;
-      b3 &= 255;
-    } else {
-      b0 = ~b0 & 255;
-      b1 = ~b1 & 255;
-      b2 = ~b2 & 255;
-      b3 = ~b3 & 255;
-    }
-
-    int intBits = b0 << 24 | b1 << 16 | b2 << 8 | b3;
-
-    return Float.intBitsToFloat(intBits);
-  }
-
-  private static double canonicalFormatBytesToDouble(byte[] binaryArray) {
-    // BINARY_DOUBLE value requires 8 bytes
-    int b0 = (int) binaryArray[0];
-    int b1 = (int) binaryArray[1];
-    int b2 = (int) binaryArray[2];
-    int b3 = (int) binaryArray[3];
-    int b4 = (int) binaryArray[4];
-    int b5 = (int) binaryArray[5];
-    int b6 = (int) binaryArray[6];
-    int b7 = (int) binaryArray[7];
-
-    if ((b0 & 128) != 0) {
-      b0 &= 127;
-      b1 &= 255;
-      b2 &= 255;
-      b3 &= 255;
-      b4 &= 255;
-      b5 &= 255;
-      b6 &= 255;
-      b7 &= 255;
-    } else {
-      b0 = ~b0 & 255;
-      b1 = ~b1 & 255;
-      b2 = ~b2 & 255;
-      b3 = ~b3 & 255;
-      b4 = ~b4 & 255;
-      b5 = ~b5 & 255;
-      b6 = ~b6 & 255;
-      b7 = ~b7 & 255;
-    }
-
-    int hiBits = b0 << 24 | b1 << 16 | b2 << 8 | b3;
-    int loBits = b4 << 24 | b5 << 16 | b6 << 8 | b7;
-    long longBits = (long) hiBits << 32 | (long) loBits & 4294967295L;
-
-    return Double.longBitsToDouble(longBits);
   }
 }
