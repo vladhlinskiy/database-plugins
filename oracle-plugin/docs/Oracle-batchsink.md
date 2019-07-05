@@ -38,6 +38,38 @@ will be passed to the JDBC driver as connection arguments for JDBC drivers that 
 
 **Default Batch Value:** The default batch value that triggers an execution request.
 
+
+Data Types Mapping
+----------
+
+	| Oracle Data Type               | CDAP Schema Data Type        | Comment                |
+	| ------------------------------ | ---------------------------- | ---------------------- |
+	| VARCHAR2                       | Type.STRING                  |                        |
+	| NVARCHAR2                      | Type.STRING                  |                        |
+	| VARCHAR                        | Type.STRING                  |                        |
+	| NUMBER                         | LogicalType.DECIMAL          |                        |
+	| FLOAT                          | Type.DOUBLE                  |                        |
+	| LONG                           | Type.STRING                  |                        |
+	| DATE                           | LogicalType.TIMESTAMP_MICROS |                        |
+	| BINARY_FLOAT                   | Type.FLOAT                   |                        |
+	| BINARY_DOUBLE                  | Type.DOUBLE                  |                        |
+	| TIMESTAMP                      | LogicalType.TIMESTAMP_MICROS |                        |
+	| TIMESTAMP WITH TIME ZONE       | LogicalType.TIMESTAMP_MICROS | Converted to UTC time  |
+	| TIMESTAMP WITH LOCAL TIME ZONE | LogicalType.TIMESTAMP_MICROS |                        |
+	| INTERVAL YEAR TO MONTH         | Type.STRING                  |                        |
+	| INTERVAL DAY TO SECOND         | Type.STRING                  |                        |
+	| RAW                            | Type.BYTES                   |                        |
+	| LONG RAW                       | Type.BYTES                   |                        |
+	| ROWID                          | Type.STRING                  |                        |
+	| UROWID                         | Type.STRING                  |                        |
+	| CHAR                           | Type.STRING                  |                        |
+	| NCHAR                          | Type.STRING                  |                        |
+	| CLOB                           | Type.STRING                  |                        |
+	| NCLOB                          | Type.STRING                  |                        |
+	| BLOB                           | Type.BYTES                   |                        |
+	| BFILE                          | Type.BYTES                   | Java API is deprecated |
+
+
 Example
 -------
 Suppose you want to write output records to "users" table of Oracle database named "XE" that is running on "localhost", 
