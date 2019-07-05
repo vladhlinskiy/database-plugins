@@ -72,7 +72,9 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
     Schema.Field.of("BLOB_COL", Schema.of(Schema.Type.BYTES)),
     Schema.Field.of("FLOAT_COL", Schema.of(Schema.Type.DOUBLE)),
     Schema.Field.of("REAL_COL", Schema.of(Schema.Type.DOUBLE)),
-    Schema.Field.of("LONG_RAW_COL", Schema.of(Schema.Type.BYTES))
+    Schema.Field.of("LONG_RAW_COL", Schema.of(Schema.Type.BYTES)),
+    Schema.Field.of("ROWID_COL", Schema.of(Schema.Type.STRING)),
+    Schema.Field.of("UROWID_COL", Schema.of(Schema.Type.STRING))
   );
 
   /**
@@ -117,6 +119,8 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
       .add(Schema.Field.of("NUMBER_COL", Schema.of(Schema.Type.DOUBLE)))
       .add(Schema.Field.of("NUMERIC_COL", Schema.of(Schema.Type.DOUBLE)))
       .add(Schema.Field.of("SMALLINT_COL", Schema.of(Schema.Type.LONG)))
+      .add(Schema.Field.of("ROWID_COL", Schema.of(Schema.Type.STRING)))
+      .add(Schema.Field.of("UROWID_COL", Schema.of(Schema.Type.STRING)))
       .build()
   );
 
@@ -146,6 +150,8 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
       assertObjectEquals(expected.get("NVARCHAR2_COL"), actual.getString("NVARCHAR2_COL").trim());
       assertObjectEquals(expected.get("CLOB_COL"), actual.getString("CLOB_COL").trim());
       assertObjectEquals(expected.get("NCLOB_COL"), actual.getString("NCLOB_COL").trim());
+      assertObjectEquals(expected.get("ROWID_COL"), actual.getString("ROWID_COL"));
+      assertObjectEquals(expected.get("UROWID_COL"), actual.getString("UROWID_COL"));
 
       assertBytesEquals(expected.get("RAW_COL"), actual.getBytes("RAW_COL"));
       assertBytesEquals(expected.get("BLOB_COL"), actual.getBytes("BLOB_COL"));
@@ -395,7 +401,9 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
         .set("BLOB_COL", name.getBytes())
         .set("FLOAT_COL", 3.14d)
         .set("REAL_COL", 3.14d)
-        .set("LONG_RAW_COL", name.getBytes());
+        .set("LONG_RAW_COL", name.getBytes())
+        .set("ROWID_COL", "AAAUEVAAFAAAAR/AA" + i)
+        .set("UROWID_COL", "AAAUEVAAFAAAAR/AA" + i);
 
       inputRecords.add(builder.build());
     }
@@ -433,7 +441,9 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
         .set("BLOB_COL", name.getBytes())
         .set("FLOAT_COL", 3.14d)
         .set("REAL_COL", 3.14d)
-        .set("LONG_RAW_COL", name.getBytes());
+        .set("LONG_RAW_COL", name.getBytes())
+        .set("ROWID_COL", "AAAUEVAAFAAAAR/AA" + i)
+        .set("UROWID_COL", "AAAUEVAAFAAAAR/AA" + i);
 
       inputRecords.add(builder.build());
     }

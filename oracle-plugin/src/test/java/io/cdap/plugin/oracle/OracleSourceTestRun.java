@@ -85,8 +85,8 @@ public class OracleSourceTestRun extends OraclePluginTestBase {
     String importQuery = "SELECT CHAR_COL, VARCHAR_COL, VARCHAR2_COL, NVARCHAR2_COL, INT_COL, INTEGER_COL, DEC_COL, " +
       "DECIMAL_COL, NUMBER_COL, NUMERIC_COL, SMALLINT_COL, REAL_COL, DATE_COL, TIMESTAMP_COL, " +
       "INTERVAL_YEAR_TO_MONTH_COL, INTERVAL_DAY_TO_SECOND_COL, RAW_COL, TIMESTAMPTZ_COL, TIMESTAMPLTZ_COL, CLOB_COL, " +
-      "NCLOB_COL, BLOB_COL, NCHAR_COL, FLOAT_COL, ROWID, BINARY_FLOAT_COL, BINARY_DOUBLE_COL, LONG_RAW_COL " +
-      "FROM my_table WHERE SMALLINT_COL < 3 AND $CONDITIONS";
+      "NCLOB_COL, BLOB_COL, NCHAR_COL, FLOAT_COL, ROWID, ROWID_COL, UROWID_COL, BINARY_FLOAT_COL, BINARY_DOUBLE_COL, " +
+      "LONG_RAW_COL FROM my_table WHERE SMALLINT_COL < 3 AND $CONDITIONS";
     String boundingQuery = "SELECT MIN(SMALLINT_COL),MAX(SMALLINT_COL) from my_table";
     String splitBy = "SMALLINT_COL";
     ETLPlugin sourceConfig = new ETLPlugin(
@@ -118,8 +118,14 @@ public class OracleSourceTestRun extends OraclePluginTestBase {
     StructuredRecord row1 = "user1".equals(userid) ? outputRecords.get(0) : outputRecords.get(1);
     StructuredRecord row2 = "user1".equals(userid) ? outputRecords.get(1) : outputRecords.get(0);
 
+    // Built-in column
     Assert.assertNotNull(row1.get("ROWID"));
     Assert.assertNotNull(row2.get("ROWID"));
+
+    Assert.assertEquals("AAAUEVAAFAAAAR/AA" + 1, row1.get("ROWID_COL").toString());
+    Assert.assertEquals("AAAUEVAAFAAAAR/AA" + 2, row2.get("ROWID_COL").toString());
+    Assert.assertEquals("AAAUEVAAFAAAAR/AA" + 1, row1.get("UROWID_COL").toString());
+    Assert.assertEquals("AAAUEVAAFAAAAR/AA" + 2, row2.get("UROWID_COL").toString());
 
     // Verify data
     Assert.assertEquals("user1", row1.get("CHAR_COL").toString().trim());

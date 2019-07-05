@@ -176,7 +176,9 @@ public class OraclePluginTestBase extends DatabasePluginTestBase {
                      "  FLOAT_COL FLOAT," + // FLOAT(126), value is represented internally as NUMBER.
                      "  BINARY_FLOAT_COL BINARY_FLOAT," +
                      "  BINARY_DOUBLE_COL BINARY_DOUBLE," +
-                     "  LONG_RAW_COL LONG RAW" +
+                     "  LONG_RAW_COL LONG RAW," +
+                     "  ROWID_COL ROWID," +
+                     "  UROWID_COL UROWID" +
                      ")";
 
       String createTableWithLongFormat = "CREATE TABLE %s (" +
@@ -199,7 +201,7 @@ public class OraclePluginTestBase extends DatabasePluginTestBase {
 
     String insertTableFormat = "INSERT INTO %s " +
       "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?," +
-      "       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+      "       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     try (
       Statement stmt = conn.createStatement();
@@ -265,6 +267,8 @@ public class OraclePluginTestBase extends DatabasePluginTestBase {
           pStmt.setObject(28, createBinaryDoubleObject(123.45 + i));
 
           pStmt.setBytes(29, name.getBytes());
+          pStmt.setString(30, "AAAUEVAAFAAAAR/AA" + i);
+          pStmt.setString(31, "AAAUEVAAFAAAAR/AA" + i);
 
           pStmt.executeUpdate();
         } finally {
