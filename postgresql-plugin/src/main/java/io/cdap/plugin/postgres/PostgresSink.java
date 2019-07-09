@@ -20,8 +20,11 @@ import com.google.common.collect.ImmutableMap;
 import io.cdap.cdap.api.annotation.Description;
 import io.cdap.cdap.api.annotation.Name;
 import io.cdap.cdap.api.annotation.Plugin;
+import io.cdap.cdap.api.data.format.StructuredRecord;
 import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.cdap.etl.api.batch.BatchSink;
+import io.cdap.plugin.db.DBRecord;
+import io.cdap.plugin.db.SchemaReader;
 import io.cdap.plugin.db.batch.config.DBSpecificSinkConfig;
 import io.cdap.plugin.db.batch.sink.AbstractDBSink;
 
@@ -46,6 +49,16 @@ public class PostgresSink extends AbstractDBSink {
   public PostgresSink(PostgresSinkConfig postgresSinkConfig) {
     super(postgresSinkConfig);
     this.postgresSinkConfig = postgresSinkConfig;
+  }
+
+  @Override
+  protected SchemaReader getSchemaReader() {
+    return new PostgresSchemaReader();
+  }
+
+  @Override
+  protected DBRecord getDBRecord(StructuredRecord.Builder output) {
+    return new PostgresDBRecord(output.build(), columnTypes);
   }
 
   @Override
