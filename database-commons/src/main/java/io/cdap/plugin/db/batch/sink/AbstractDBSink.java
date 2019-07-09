@@ -65,12 +65,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 /**
@@ -163,7 +161,6 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
    * Extracts column info from input schema. Later it is used for metadata retrieval
    * and insert during query generation. Override this method if you need to escape column names
    * for databases with case-sensitive identifiers
-   *
    */
   protected void setColumnsInfo(List<Schema.Field> fields) {
     columns = fields.stream()
@@ -235,7 +232,7 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
   }
 
   private void setResultSetMetadata() throws Exception {
-    Map<String, Integer> columnToType = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+    List<ColumnType> columnTypes = new ArrayList<>(columns.size());
     String connectionString = dbSinkConfig.getConnectionString();
 
     driverCleanup = DBUtils.ensureJDBCDriverIsAvailable(driverClass, connectionString, dbSinkConfig.jdbcPluginName);
@@ -255,18 +252,17 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
         // JDBC driver column indices start with 1
         for (int i = 0; i < rs.getMetaData().getColumnCount(); i++) {
           String name = resultSetMetadata.getColumnName(i + 1);
+          String columnTypeName = resultSetMetadata.getColumnTypeName(i + 1);
           int type = resultSetMetadata.getColumnType(i + 1);
-          columnToType.put(name, type);
+          String schemaColumnName = columns.get(i);
+          Preconditions.checkArgument(schemaColumnName.toLowerCase().equals(name.toLowerCase()),
+                                      "Missing column '%s' in SQL table", schemaColumnName);
+          columnTypes.add(new ColumnType(schemaColumnName, columnTypeName, type));
         }
       }
     }
 
-    this.columnTypes = columns.stream()
-      .map(name -> {
-        Preconditions.checkArgument(columnToType.containsKey(name), "Missing column '%s' in SQL table", name);
-        return new ColumnType(name, columnToType.get(name));
-      })
-      .collect(Collectors.collectingAndThen(Collectors.toList(), Collections::unmodifiableList));
+    this.columnTypes = Collections.unmodifiableList(columnTypes);
   }
 
   private void validateSchema(Class<? extends Driver> jdbcDriverClass, String tableName, Schema inputSchema) {
@@ -341,9 +337,10 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
 
   /**
    * Checks if field is compatible to be written into database column of the given sql index.
-   * @param field field of the explicit input schema.
+   *
+   * @param field    field of the explicit input schema.
    * @param metadata resultSet metadata.
-   * @param index sql column index.
+   * @param index    sql column index.
    * @return 'true' if field is compatible to be written, 'false' otherwise.
    */
   protected boolean isFieldCompatible(Schema.Field field, ResultSetMetaData metadata, int index) throws SQLException {
@@ -378,7 +375,7 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
           || sqlType == Types.BIT;
       case INT:
         return sqlType == Types.INTEGER
-          ||  sqlType == Types.SMALLINT
+          || sqlType == Types.SMALLINT
           || sqlType == Types.TINYINT;
       case LONG:
         return sqlType == Types.BIGINT;
@@ -438,6 +435,7 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
     /**
      * Adds escape characters (back quotes, double quotes, etc.) to the table name for
      * databases with case-sensitive identifiers.
+     *
      * @return tableName with leading and trailing escape characters appended.
      * Default implementation returns unchanged table name string.
      */
