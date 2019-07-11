@@ -19,6 +19,7 @@ package io.cdap.plugin.oracle;
 import io.cdap.cdap.api.common.Bytes;
 import io.cdap.cdap.api.data.format.StructuredRecord;
 import io.cdap.cdap.api.data.schema.Schema;
+import io.cdap.plugin.db.ColumnType;
 import io.cdap.plugin.db.DBRecord;
 import io.cdap.plugin.db.SchemaReader;
 
@@ -39,10 +40,9 @@ import java.util.List;
  */
 public class OracleDBRecord extends DBRecord {
 
-  public OracleDBRecord(StructuredRecord record, int[] columnTypes, List<String> columns) {
+  public OracleDBRecord(StructuredRecord record, List<ColumnType> columnTypes) {
     this.record = record;
     this.columnTypes = columnTypes;
-    this.columns = columns;
   }
 
   /**

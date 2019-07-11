@@ -18,6 +18,7 @@ package io.cdap.plugin.postgres;
 
 import io.cdap.cdap.api.data.format.StructuredRecord;
 import io.cdap.cdap.api.data.schema.Schema;
+import io.cdap.plugin.db.ColumnType;
 import io.cdap.plugin.db.DBRecord;
 import io.cdap.plugin.db.SchemaReader;
 
@@ -30,8 +31,8 @@ import java.util.List;
  */
 public class PostgresDBRecord extends DBRecord {
 
-  public PostgresDBRecord(StructuredRecord record, int[] columnTypes, List<String> columns) {
-    super(record, columnTypes, columns);
+  public PostgresDBRecord(StructuredRecord record, List<ColumnType> columnTypes) {
+    super(record, columnTypes);
   }
 
   /**

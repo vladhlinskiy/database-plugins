@@ -20,7 +20,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
 import io.cdap.cdap.api.annotation.Description;
 import io.cdap.cdap.api.annotation.Macro;
 import io.cdap.cdap.api.annotation.Name;
@@ -38,6 +37,7 @@ import io.cdap.plugin.common.LineageRecorder;
 import io.cdap.plugin.common.ReferenceBatchSink;
 import io.cdap.plugin.common.ReferencePluginConfig;
 import io.cdap.plugin.common.batch.sink.SinkOutputFormatProvider;
+import io.cdap.plugin.db.ColumnType;
 import io.cdap.plugin.db.CommonSchemaReader;
 import io.cdap.plugin.db.ConnectionConfig;
 import io.cdap.plugin.db.ConnectionConfigAccessor;
@@ -80,8 +80,7 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
   private final DBSinkConfig dbSinkConfig;
   private Class<? extends Driver> driverClass;
   private DriverCleanup driverCleanup;
-  protected int[] columnTypes;
-  protected List<String> columns;
+  protected List<ColumnType> columnTypes;
   protected String dbColumns;
   private Schema outputSchema;
 
@@ -165,11 +164,14 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
    *
    */
   protected void setColumnsInfo(List<Schema.Field> fields) {
-    columns = fields.stream()
+    columnTypes = fields.stream()
       .map(Schema.Field::getName)
+      .map(ColumnType::new)
       .collect(Collectors.collectingAndThen(Collectors.toList(), Collections::unmodifiableList));
 
-    dbColumns = String.join(",", columns);
+    dbColumns = columnTypes.stream()
+      .map(ColumnType::getName)
+      .collect(Collectors.joining(","));
   }
 
   @Override
@@ -213,7 +215,7 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
   }
 
   protected DBRecord getDBRecord(StructuredRecord output) {
-    return new DBRecord(output, columnTypes, columns);
+    return new DBRecord(output, columnTypes);
   }
 
   protected SchemaReader getSchemaReader() {
@@ -230,7 +232,9 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
 
   @VisibleForTesting
   public void setColumns(List<String> columns) {
-    this.columns = ImmutableList.copyOf(columns);
+    this.columnTypes = columns.stream()
+      .map(ColumnType::new)
+      .collect(Collectors.collectingAndThen(Collectors.toList(), Collections::unmodifiableList));
   }
 
   private void setResultSetMetadata() throws Exception {
@@ -260,12 +264,11 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
       }
     }
 
-    columnTypes = new int[columns.size()];
-    for (int i = 0; i < columnTypes.length; i++) {
-      String name = columns.get(i);
+    columnTypes.forEach(columnType -> {
+      String name = columnType.getName();
       Preconditions.checkArgument(columnToType.containsKey(name), "Missing column '%s' in SQL table", name);
-      columnTypes[i] = columnToType.get(name);
-    }
+      columnType.setType(columnToType.get(name));
+    });
   }
 
   private void validateSchema(Class<? extends Driver> jdbcDriverClass, String tableName, Schema inputSchema) {

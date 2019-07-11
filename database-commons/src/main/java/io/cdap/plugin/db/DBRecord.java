@@ -59,26 +59,18 @@ public class DBRecord implements Writable, DBWritable, Configurable {
   private final Lazy<Schema> schema = new Lazy<>(this::computeSchema);
 
   /**
-   * Need to cache {@link ResultSetMetaData} of the record for use during writing to a table.
-   * This is because we cannot rely on JDBC drivers to properly set metadata in the {@link PreparedStatement}
-   * passed to the #write method in this class.
+   * Need to cache column types to set fields of the input record on {@link PreparedStatement} in the right order.
    */
-  protected int[] columnTypes;
-
-  /**
-   * Need to cache column names to set fields of the input record on {@link PreparedStatement} in the right order.
-   */
-  protected List<String> columns;
+  protected List<ColumnType> columnTypes;
 
   /**
    * Used to construct a DBRecord from a StructuredRecord in the ETL Pipeline
    *
    * @param record the {@link StructuredRecord} to construct the {@link DBRecord} from
    */
-  public DBRecord(StructuredRecord record, int[] columnTypes, List<String> columns) {
+  public DBRecord(StructuredRecord record, List<ColumnType> columnTypes) {
     this.record = record;
     this.columnTypes = columnTypes;
-    this.columns = columns;
   }
 
   /**
@@ -208,14 +200,15 @@ public class DBRecord implements Writable, DBWritable, Configurable {
    * @param stmt the {@link PreparedStatement} to write the {@link StructuredRecord} to
    */
   public void write(PreparedStatement stmt) throws SQLException {
-    for (int i = 0; i < columns.size(); i++) {
-      Schema.Field field = record.getSchema().getField(columns.get(i));
+    for (int i = 0; i < columnTypes.size(); i++) {
+      ColumnType columnType = columnTypes.get(i);
+      Schema.Field field = record.getSchema().getField(columnType.getName());
       if (field != null) {
         writeToDB(stmt, field, i);
       } else {
         // Some of the fields can be absent in the record
         int sqlIndex = i + 1;
-        stmt.setNull(sqlIndex, columnTypes[i]);
+        stmt.setNull(sqlIndex, columnType.getType());
       }
     }
   }
@@ -284,7 +277,7 @@ public class DBRecord implements Writable, DBWritable, Configurable {
     int sqlIndex = fieldIndex + 1;
 
     if (fieldValue == null) {
-      stmt.setNull(sqlIndex, columnTypes[fieldIndex]);
+      stmt.setNull(sqlIndex, columnTypes.get(fieldIndex).getType());
       return;
     }
 
@@ -310,7 +303,7 @@ public class DBRecord implements Writable, DBWritable, Configurable {
 
     switch (fieldType) {
       case NULL:
-        stmt.setNull(sqlIndex, columnTypes[fieldIndex]);
+        stmt.setNull(sqlIndex, columnTypes.get(fieldIndex).getType());
         break;
       case STRING:
         // clob can also be written to as setString
@@ -344,7 +337,7 @@ public class DBRecord implements Writable, DBWritable, Configurable {
   protected void writeBytes(PreparedStatement stmt, int fieldIndex, int sqlIndex, Object fieldValue)
     throws SQLException {
     byte[] byteValue = fieldValue instanceof ByteBuffer ? Bytes.toBytes((ByteBuffer) fieldValue) : (byte[]) fieldValue;
-    int parameterType = columnTypes[fieldIndex];
+    int parameterType = columnTypes.get(fieldIndex).getType();
     if (Types.BLOB == parameterType) {
       stmt.setBlob(sqlIndex, new SerialBlob(byteValue));
       return;
@@ -355,7 +348,7 @@ public class DBRecord implements Writable, DBWritable, Configurable {
 
   protected void writeInt(PreparedStatement stmt, int fieldIndex, int sqlIndex, Object fieldValue) throws SQLException {
     Integer intValue = (Integer) fieldValue;
-    int parameterType = columnTypes[fieldIndex];
+    int parameterType = columnTypes.get(fieldIndex).getType();
     if (Types.TINYINT == parameterType || Types.SMALLINT == parameterType) {
       stmt.setShort(sqlIndex, intValue.shortValue());
       return;
