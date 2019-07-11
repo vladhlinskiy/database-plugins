@@ -21,13 +21,17 @@ import io.cdap.cdap.api.annotation.Description;
 import io.cdap.cdap.api.annotation.Name;
 import io.cdap.cdap.api.annotation.Plugin;
 import io.cdap.cdap.api.data.format.StructuredRecord;
+import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.cdap.etl.api.batch.BatchSink;
 import io.cdap.plugin.db.DBRecord;
 import io.cdap.plugin.db.SchemaReader;
 import io.cdap.plugin.db.batch.config.DBSpecificSinkConfig;
 import io.cdap.plugin.db.batch.sink.AbstractDBSink;
 
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
 import java.util.Map;
+import java.util.Objects;
 import javax.annotation.Nullable;
 
 /**
@@ -48,6 +52,43 @@ public class OracleSink extends AbstractDBSink {
   @Override
   protected DBRecord getDBRecord(StructuredRecord output) {
     return new OracleDBRecord(output, columnTypes);
+  }
+
+  @Override
+  public boolean isFieldCompatible(Schema.Field field, ResultSetMetaData metadata, int index) throws SQLException {
+    Schema outputFieldSchema = getSchemaReader().getSchema(metadata, index);
+    Schema outputFieldNonNullableSchema = outputFieldSchema.isNullable()
+      ? outputFieldSchema.getNonNullable()
+      : outputFieldSchema;
+    Schema inputFieldNonNullableSchema = field.getSchema().isNullable()
+      ? field.getSchema().getNonNullable()
+      : field.getSchema();
+    // Handle the case when output schema expects decimal logical type but we got valid primitive.
+    // It's safe to write primitives as values of decimal logical type in the case of valid precision.
+    if (Schema.LogicalType.DECIMAL == outputFieldNonNullableSchema.getLogicalType()) {
+      int precision = metadata.getPrecision(index);
+      switch (inputFieldNonNullableSchema.getType()) {
+        case INT:
+          // With 10 digits we can represent Integer.MAX_VALUE.
+          // It is equal to the value returned by (new BigDecimal(Integer.MAX_VALUE)).precision()
+          return precision >= 10;
+        case LONG:
+          // With 19 digits we can represent Long.MAX_VALUE.
+          // It is equal to the value returned by (new BigDecimal(Long.MAX_VALUE)).precision()
+          return precision >= 19;
+        case FLOAT:
+        case DOUBLE:
+          // Actual value can be rounded to match output schema
+          return true;
+        default:
+          return super.isFieldCompatible(field, metadata, index);
+      }
+    } else if (OracleSchemaReader.ORACLE_TYPES.contains(metadata.getColumnType(index))) {
+      return Objects.equals(inputFieldNonNullableSchema.getType(), outputFieldNonNullableSchema.getType()) &&
+        Objects.equals(inputFieldNonNullableSchema.getLogicalType(), outputFieldNonNullableSchema.getLogicalType());
+    } else {
+      return super.isFieldCompatible(field, metadata, index);
+    }
   }
 
   @Override

@@ -23,7 +23,6 @@ import io.cdap.plugin.db.CommonSchemaReader;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Types;
-import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -88,44 +87,6 @@ public class OracleSchemaReader extends CommonSchemaReader {
         }
       default:
         return super.getSchema(metadata, index);
-    }
-  }
-
-  @Override
-  public boolean isTypeCompatible(Schema.Field field, ResultSetMetaData metadata, int index) throws SQLException {
-
-    Schema outputFieldSchema = getSchema(metadata, index);
-    Schema outputFieldNonNullableSchema = outputFieldSchema.isNullable()
-      ? outputFieldSchema.getNonNullable()
-      : outputFieldSchema;
-    Schema inputFieldNonNullableSchema = field.getSchema().isNullable()
-      ? field.getSchema().getNonNullable()
-      : field.getSchema();
-    // Handle the case when output schema expects decimal logical type but we got valid primitive.
-    // It's safe to write primitives as values of decimal logical type in the case of valid precision.
-    if (Schema.LogicalType.DECIMAL == outputFieldNonNullableSchema.getLogicalType()) {
-      int precision = metadata.getPrecision(index);
-      switch (inputFieldNonNullableSchema.getType()) {
-        case INT:
-          // With 10 digits we can represent Integer.MAX_VALUE.
-          // It is equal to the value returned by (new BigDecimal(Integer.MAX_VALUE)).precision()
-          return precision >= 10;
-        case LONG:
-          // With 19 digits we can represent Long.MAX_VALUE.
-          // It is equal to the value returned by (new BigDecimal(Long.MAX_VALUE)).precision()
-          return precision >= 19;
-        case FLOAT:
-        case DOUBLE:
-          // Actual value can be rounded to match output schema
-          return true;
-        default:
-          return super.isTypeCompatible(field, metadata, index);
-      }
-    } else if (ORACLE_TYPES.contains(metadata.getColumnType(index))) {
-      return Objects.equals(inputFieldNonNullableSchema.getType(), outputFieldNonNullableSchema.getType()) &&
-        Objects.equals(inputFieldNonNullableSchema.getLogicalType(), outputFieldNonNullableSchema.getLogicalType());
-    } else {
-      return super.isTypeCompatible(field, metadata, index);
     }
   }
 }

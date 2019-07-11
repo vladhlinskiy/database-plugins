@@ -344,12 +344,19 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
     int precision = metadata.getPrecision(index);
     int scale = metadata.getScale(index);
 
-    Schema inputFieldSchema = field.getSchema().isNullable() ? field.getSchema().getNonNullable() : field.getSchema();
-    Schema outputFieldSchema = DBUtils.getSchema(type, precision, scale);
-    if (!Objects.equals(inputFieldSchema.getType(), outputFieldSchema.getType()) ||
-      !Objects.equals(inputFieldSchema.getLogicalType(), outputFieldSchema.getLogicalType())) {
+    Schema columnSchema = DBUtils.getSchema(type, precision, scale);
+    Schema.Type columnType = columnSchema.getType();
+    Schema.LogicalType columnLogicalType = columnSchema.getLogicalType();
+
+    Schema fieldSchema = field.getSchema().isNullable() ? field.getSchema().getNonNullable() : field.getSchema();
+    Schema.Type fieldType = fieldSchema.getType();
+    Schema.LogicalType fieldLogicalType = fieldSchema.getLogicalType();
+    if (!Objects.equals(fieldType, columnType) || !Objects.equals(fieldLogicalType, columnLogicalType)) {
       LOG.error("Field '{}' was given as type '{}' but the database column is actually of type '{}'.",
-                field.getName(), inputFieldSchema.getType(), outputFieldSchema.getType());
+                field.getName(),
+                fieldLogicalType != null ? fieldLogicalType.getToken() : fieldType,
+                columnLogicalType != null ? columnLogicalType.getToken() : columnType
+      );
       return false;
     }
 
