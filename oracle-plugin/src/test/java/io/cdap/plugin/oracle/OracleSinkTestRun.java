@@ -24,6 +24,7 @@ import io.cdap.cdap.api.dataset.table.Table;
 import io.cdap.cdap.etl.api.batch.BatchSink;
 import io.cdap.cdap.etl.mock.batch.MockSource;
 import io.cdap.cdap.etl.proto.v2.ETLPlugin;
+import io.cdap.cdap.test.ApplicationManager;
 import io.cdap.cdap.test.DataSetManager;
 import io.cdap.plugin.common.Constants;
 import io.cdap.plugin.db.batch.sink.AbstractDBSink;
@@ -44,10 +45,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.BiConsumer;
-
-import static io.cdap.plugin.db.CustomAssertions.assertBytesEquals;
-import static io.cdap.plugin.db.CustomAssertions.assertNumericEquals;
-import static io.cdap.plugin.db.CustomAssertions.assertObjectEquals;
 
 /**
  * Test for ETL using databases.
@@ -251,34 +248,42 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
   @Test
   public void testDBSinkWithExplicitInputSchema() throws Exception {
     testSink("testDBSinkWithExplicitInputSchema", "explicit", MY_DEST_TABLE, DECIMAL_SCHEMA,
-             createInputData(), Arrays.asList(COMPARE_DECIMALS, COMPARE_COMMON));
+             createInputData(), getSinkConfig(), Arrays.asList(COMPARE_DECIMALS, COMPARE_COMMON));
   }
 
   @Test
   public void testDBSinkWithInferredInputSchema() throws Exception {
     testSink("testDBSinkWithInferredInputSchema", "inferred", MY_DEST_TABLE, null,
-             createInputData(), Arrays.asList(COMPARE_DECIMALS, COMPARE_COMMON));
+             createInputData(), getSinkConfig(), Arrays.asList(COMPARE_DECIMALS, COMPARE_COMMON));
   }
 
   @Test
   public void testDBSinkPrimitiveToDecimalWithExplicitSchema() throws Exception {
-    testSink("testDBSinkPrimitiveToDecimalWithExplicitSchema", "primitive-explicit",
-             MY_DEST_TABLE, PRIMITIVE_SCHEMA, createPrimitivesInputData(), Arrays.asList(COMPARE_PRIMITIVES,
-                                                                                         COMPARE_COMMON));
+    testSink("testDBSinkPrimitiveToDecimalWithExplicitSchema", "primitive-explicit", MY_DEST_TABLE,
+             PRIMITIVE_SCHEMA, createPrimitivesInputData(), getSinkConfig(),
+             Arrays.asList(COMPARE_PRIMITIVES, COMPARE_COMMON));
   }
 
   @Test
   public void testDBSinkPrimitiveToDecimalInferredInputSchema() throws Exception {
-    testSink("testDBSinkPrimitiveToDecimalInferredInputSchema", "primitive-inferred",
-             MY_DEST_TABLE, null, createPrimitivesInputData(), Arrays.asList(COMPARE_PRIMITIVES,
-                                                                             COMPARE_COMMON));
+    testSink("testDBSinkPrimitiveToDecimalInferredInputSchema", "primitive-inferred", MY_DEST_TABLE,
+             null, createPrimitivesInputData(), getSinkConfig(), Arrays.asList(COMPARE_PRIMITIVES, COMPARE_COMMON));
   }
 
   @Test
   public void testDBSinkLongColumn() throws Exception {
-    testSink("testDBSinkLongColumn", "long-column",
-             MY_DEST_TABLE_FOR_LONG, null, createLongColumnInputData(),
-             Collections.singletonList(COMPARE_LONG_COLUMN));
+    ETLPlugin sinkConfig = new ETLPlugin(
+      OracleConstants.PLUGIN_NAME,
+      BatchSink.PLUGIN_TYPE,
+      ImmutableMap.<String, String>builder()
+        .putAll(BASE_PROPS)
+        .put(AbstractDBSink.DBSinkConfig.TABLE_NAME, MY_DEST_TABLE_FOR_LONG)
+        .put(Constants.Reference.REFERENCE_NAME, "DBTest")
+        .build(),
+      null);
+
+    testSink("testDBSinkLongColumn", "long-column", MY_DEST_TABLE_FOR_LONG, null,
+             createLongColumnInputData(), sinkConfig, Collections.singletonList(COMPARE_LONG_COLUMN));
   }
 
   @Test
@@ -295,7 +300,7 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
     };
 
     testSink("testDBSinkSingleFieldInferredInputSchema", "single-field-inferred",
-             MY_DEST_TABLE, null, Collections.singletonList(record), Collections.singletonList(test));
+             MY_DEST_TABLE, null, Collections.singletonList(record), getSinkConfig(), Collections.singletonList(test));
   }
 
   @Test
@@ -312,7 +317,7 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
     };
 
     testSink("testDBSinkSingleFieldExplicitInputSchema", "single-field-explicit", MY_DEST_TABLE,
-             schema, Collections.singletonList(record), Collections.singletonList(test));
+             schema, Collections.singletonList(record), getSinkConfig(), Collections.singletonList(test));
   }
 
   private void testSink(String appName,
@@ -320,14 +325,17 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
                         String tableName,
                         Schema schema,
                         List<StructuredRecord> inputRecords,
+                        ETLPlugin sinkConfig,
                         List<BiConsumer<StructuredRecord, ResultSet>> testActions) throws Exception {
 
     ETLPlugin sourceConfig = (schema != null)
       ? MockSource.getPlugin(inputDatasetName, schema)
       : MockSource.getPlugin(inputDatasetName);
-    ETLPlugin sinkConfig = getSinkConfig();
 
-    deployETL(sourceConfig, sinkConfig, DATAPIPELINE_ARTIFACT, appName);
+    ApplicationManager applicationManager = deployETL(sourceConfig, sinkConfig, DATAPIPELINE_ARTIFACT, appName);
+    DataSetManager<Table> inputManager = getDataset(inputDatasetName);
+    MockSource.writeInput(inputManager, inputRecords);
+    runETLOnce(applicationManager);
 
     try (Connection conn = createConnection();
          Statement stmt = conn.createStatement();
@@ -374,7 +382,6 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
     MockSource.writeInput(inputManager, inputRecords);
   }
 
-
   private List<StructuredRecord> createInputData() throws Exception {
     List<StructuredRecord> inputRecords = new ArrayList<>();
     LocalDateTime localDateTime = new Timestamp(CURRENT_TS).toLocalDateTime();
@@ -397,10 +404,9 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
         .setDecimal("NUMBER_COL", new BigDecimal(3.456, new MathContext(PRECISION)).setScale(SCALE))
         .setDecimal("NUMERIC_COL", new BigDecimal(3.457, new MathContext(PRECISION)).setScale(SCALE))
         // It's safe to store such values using SMALLINT since it's actually NUMBER(38, 0)
-        .setDecimal("SMALLINT_COL",
-                    new BigDecimal(Long.MAX_VALUE, new MathContext(DEFAULT_PRECISION))
-                      .setScale(0)
-                      .add(new BigDecimal(Long.MAX_VALUE)))
+        .setDecimal("SMALLINT_COL", new BigDecimal(Long.MAX_VALUE, new MathContext(DEFAULT_PRECISION))
+          .setScale(0)
+          .add(new BigDecimal(Long.MAX_VALUE)))
         .setTimestamp("DATE_COL", localDateTime.atZone(UTC))
         .setTimestamp("TIMESTAMP_COL", localDateTime.atZone(UTC))
         .set("INTERVAL_YEAR_TO_MONTH_COL", "300-5")

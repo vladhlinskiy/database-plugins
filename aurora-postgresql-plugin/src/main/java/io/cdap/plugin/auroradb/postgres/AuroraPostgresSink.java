@@ -22,14 +22,14 @@ import io.cdap.cdap.api.annotation.Name;
 import io.cdap.cdap.api.annotation.Plugin;
 import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.cdap.etl.api.batch.BatchSink;
+import io.cdap.plugin.db.ColumnType;
 import io.cdap.plugin.db.batch.config.DBSpecificSinkConfig;
 import io.cdap.plugin.db.batch.sink.AbstractDBSink;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.StringJoiner;
+import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 /**
@@ -51,16 +51,15 @@ public class AuroraPostgresSink extends AbstractDBSink {
 
   @Override
   protected void setColumnsInfo(List<Schema.Field> fields) {
-    List<String> columnsList = new ArrayList<>();
-    StringJoiner columnsJoiner = new StringJoiner(",");
+    super.columnTypes = fields.stream()
+      .map(Schema.Field::getName)
+      .map(name -> ESCAPE_CHAR + name + ESCAPE_CHAR)
+      .map(ColumnType::new)
+      .collect(Collectors.collectingAndThen(Collectors.toList(), Collections::unmodifiableList));
 
-    for (Schema.Field field : fields) {
-      columnsList.add(field.getName());
-      columnsJoiner.add(ESCAPE_CHAR + field.getName() + ESCAPE_CHAR);
-    }
-
-    super.columns = Collections.unmodifiableList(columnsList);
-    super.dbColumns = columnsJoiner.toString();
+    super.dbColumns = columnTypes.stream()
+      .map(ColumnType::getName)
+      .collect(Collectors.joining(","));
   }
 
   /**

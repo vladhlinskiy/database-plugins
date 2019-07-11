@@ -56,32 +56,32 @@ will be passed to the JDBC driver as connection arguments for JDBC drivers that 
 Data Types Mapping
 ----------
 
-	| Oracle Data Type               | CDAP Schema Data Type        | Comment                |
-	| ------------------------------ | ---------------------------- | ---------------------- |
-	| VARCHAR2                       | Type.STRING                  |                        |
-	| NVARCHAR2                      | Type.STRING                  |                        |
-	| VARCHAR                        | Type.STRING                  |                        |
-	| NUMBER                         | LogicalType.DECIMAL          |                        |
-	| FLOAT                          | Type.DOUBLE                  |                        |
-	| LONG                           | Type.STRING                  |                        |
-	| DATE                           | LogicalType.TIMESTAMP_MICROS |                        |
-	| BINARY_FLOAT                   | Type.FLOAT                   |                        |
-	| BINARY_DOUBLE                  | Type.DOUBLE                  |                        |
-	| TIMESTAMP                      | LogicalType.TIMESTAMP_MICROS |                        |
-	| TIMESTAMP WITH TIME ZONE       | LogicalType.TIMESTAMP_MICROS | Converted to UTC time  |
-	| TIMESTAMP WITH LOCAL TIME ZONE | LogicalType.TIMESTAMP_MICROS |                        |
-	| INTERVAL YEAR TO MONTH         | Type.STRING                  |                        |
-	| INTERVAL DAY TO SECOND         | Type.STRING                  |                        |
-	| RAW                            | Type.BYTES                   |                        |
-	| LONG RAW                       | Type.BYTES                   |                        |
-	| ROWID                          | Type.STRING                  |                        |
-	| UROWID                         | Type.STRING                  |                        |
-	| CHAR                           | Type.STRING                  |                        |
-	| NCHAR                          | Type.STRING                  |                        |
-	| CLOB                           | Type.STRING                  |                        |
-	| NCLOB                          | Type.STRING                  |                        |
-	| BLOB                           | Type.BYTES                   |                        |
-	| BFILE                          | Type.BYTES                   | Java API is deprecated |
+    | Oracle Data Type               | CDAP Schema Data Type | Comment                |
+    | ------------------------------ | --------------------- | ---------------------- |
+    | VARCHAR2                       | string                |                        |
+    | NVARCHAR2                      | string                |                        |
+    | VARCHAR                        | string                |                        |
+    | NUMBER                         | decimal               |                        |
+    | FLOAT                          | double                |                        |
+    | LONG                           | string                |                        |
+    | DATE                           | timestamp             |                        |
+    | BINARY_FLOAT                   | float                 |                        |
+    | BINARY_DOUBLE                  | double                |                        |
+    | TIMESTAMP                      | timestamp             |                        |
+    | TIMESTAMP WITH TIME ZONE       | timestamp             | Converted to UTC time  |
+    | TIMESTAMP WITH LOCAL TIME ZONE | timestamp             |                        |
+    | INTERVAL YEAR TO MONTH         | string                |                        |
+    | INTERVAL DAY TO SECOND         | string                |                        |
+    | RAW                            | bytes                 |                        |
+    | LONG RAW                       | bytes                 |                        |
+    | ROWID                          | string                |                        |
+    | UROWID                         | string                |                        |
+    | CHAR                           | string                |                        |
+    | NCHAR                          | string                |                        |
+    | CLOB                           | string                |                        |
+    | NCLOB                          | string                |                        |
+    | BLOB                           | bytes                 |                        |
+    | BFILE                          | bytes                 |                        |
 
 
 Example

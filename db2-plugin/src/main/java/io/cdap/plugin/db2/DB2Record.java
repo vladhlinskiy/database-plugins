@@ -18,6 +18,7 @@ package io.cdap.plugin.db2;
 
 import io.cdap.cdap.api.data.format.StructuredRecord;
 import io.cdap.cdap.api.data.schema.Schema;
+import io.cdap.plugin.db.ColumnType;
 import io.cdap.plugin.db.DBRecord;
 import io.cdap.plugin.db.SchemaReader;
 
@@ -38,8 +39,8 @@ public class DB2Record extends DBRecord {
   public DB2Record() {
   }
 
-  public DB2Record(StructuredRecord build, int[] columnTypes, List<String> columns) {
-    super(build, columnTypes, columns);
+  public DB2Record(StructuredRecord build, List<ColumnType> columnTypes) {
+    super(build, columnTypes);
   }
 
   @Override
