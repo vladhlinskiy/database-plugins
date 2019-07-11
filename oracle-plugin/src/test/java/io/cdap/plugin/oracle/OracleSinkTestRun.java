@@ -27,6 +27,7 @@ import io.cdap.cdap.etl.proto.v2.ETLPlugin;
 import io.cdap.cdap.test.ApplicationManager;
 import io.cdap.cdap.test.DataSetManager;
 import io.cdap.plugin.common.Constants;
+import io.cdap.plugin.db.CustomAssertions;
 import io.cdap.plugin.db.batch.sink.AbstractDBSink;
 import org.junit.Assert;
 import org.junit.Before;
@@ -136,37 +137,38 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
   private static final BiConsumer<StructuredRecord, ResultSet> COMPARE_COMMON = (expected, actual) -> {
     try {
       // Verify data
-      assertBytesEquals(expected.get("LONG_RAW_COL"), actual.getBytes("LONG_RAW_COL"));
+      Assert.assertArrayEquals(expected.get("LONG_RAW_COL"), actual.getBytes("LONG_RAW_COL"));
 
-      assertNumericEquals(expected.get("FLOAT_COL"), actual.getDouble("FLOAT_COL"));
-      assertNumericEquals(expected.get("REAL_COL"), actual.getDouble("REAL_COL"));
-      assertNumericEquals(expected.get("BINARY_FLOAT_COL"), actual.getFloat("BINARY_FLOAT_COL"));
-      assertNumericEquals(expected.get("BINARY_DOUBLE_COL"), actual.getDouble("BINARY_DOUBLE_COL"));
+      CustomAssertions.assertNumericEquals(expected.get("FLOAT_COL"), actual.getDouble("FLOAT_COL"));
+      CustomAssertions.assertNumericEquals(expected.get("REAL_COL"), actual.getDouble("REAL_COL"));
+      CustomAssertions.assertNumericEquals(expected.get("BINARY_FLOAT_COL"), actual.getFloat("BINARY_FLOAT_COL"));
+      CustomAssertions.assertNumericEquals(expected.get("BINARY_DOUBLE_COL"), actual.getDouble("BINARY_DOUBLE_COL"));
 
-      assertObjectEquals(expected.get("CHAR_COL"), actual.getString("CHAR_COL").trim());
-      assertObjectEquals(expected.get("NCHAR_COL"), actual.getString("NCHAR_COL").trim());
-      assertObjectEquals(expected.get("CHARACTER_COL"), actual.getString("CHARACTER_COL").trim());
-      assertObjectEquals(expected.get("VARCHAR_COL"), actual.getString("VARCHAR_COL").trim());
-      assertObjectEquals(expected.get("VARCHAR2_COL"), actual.getString("VARCHAR2_COL").trim());
-      assertObjectEquals(expected.get("NVARCHAR2_COL"), actual.getString("NVARCHAR2_COL").trim());
-      assertObjectEquals(expected.get("CLOB_COL"), actual.getString("CLOB_COL").trim());
-      assertObjectEquals(expected.get("NCLOB_COL"), actual.getString("NCLOB_COL").trim());
-      assertObjectEquals(expected.get("ROWID_COL"), actual.getString("ROWID_COL"));
-      assertObjectEquals(expected.get("UROWID_COL"), actual.getString("UROWID_COL"));
+      CustomAssertions.assertObjectEquals(expected.get("CHAR_COL"), actual.getString("CHAR_COL").trim());
+      CustomAssertions.assertObjectEquals(expected.get("NCHAR_COL"), actual.getString("NCHAR_COL").trim());
+      CustomAssertions.assertObjectEquals(expected.get("CHARACTER_COL"), actual.getString("CHARACTER_COL").trim());
+      CustomAssertions.assertObjectEquals(expected.get("VARCHAR_COL"), actual.getString("VARCHAR_COL").trim());
+      CustomAssertions.assertObjectEquals(expected.get("VARCHAR2_COL"), actual.getString("VARCHAR2_COL").trim());
+      CustomAssertions.assertObjectEquals(expected.get("NVARCHAR2_COL"), actual.getString("NVARCHAR2_COL").trim());
+      CustomAssertions.assertObjectEquals(expected.get("CLOB_COL"), actual.getString("CLOB_COL").trim());
+      CustomAssertions.assertObjectEquals(expected.get("NCLOB_COL"), actual.getString("NCLOB_COL").trim());
+      CustomAssertions.assertObjectEquals(expected.get("ROWID_COL"), actual.getString("ROWID_COL"));
+      CustomAssertions.assertObjectEquals(expected.get("UROWID_COL"), actual.getString("UROWID_COL"));
 
-      assertBytesEquals(expected.get("RAW_COL"), actual.getBytes("RAW_COL"));
-      assertBytesEquals(expected.get("BLOB_COL"), actual.getBytes("BLOB_COL"));
+      Assert.assertArrayEquals(expected.get("RAW_COL"), actual.getBytes("RAW_COL"));
+      Assert.assertArrayEquals(expected.get("BLOB_COL"), actual.getBytes("BLOB_COL"));
 
-      assertObjectEquals("23 3:2:10.0", actual.getString("INTERVAL_DAY_TO_SECOND_COL"));
-      assertObjectEquals(expected.get("INTERVAL_YEAR_TO_MONTH_COL"), actual.getString("INTERVAL_YEAR_TO_MONTH_COL"));
+      CustomAssertions.assertObjectEquals("23 3:2:10.0", actual.getString("INTERVAL_DAY_TO_SECOND_COL"));
+      CustomAssertions.assertObjectEquals(expected.get("INTERVAL_YEAR_TO_MONTH_COL"),
+                                          actual.getString("INTERVAL_YEAR_TO_MONTH_COL"));
 
-      assertObjectEquals(expected.getTimestamp("DATE_COL").toEpochSecond(),
+      CustomAssertions.assertObjectEquals(expected.getTimestamp("DATE_COL").toEpochSecond(),
                          actual.getTimestamp("DATE_COL").toInstant().getEpochSecond());
-      assertObjectEquals(expected.getTimestamp("TIMESTAMP_COL").toEpochSecond(),
+      CustomAssertions.assertObjectEquals(expected.getTimestamp("TIMESTAMP_COL").toEpochSecond(),
                          actual.getTimestamp("TIMESTAMP_COL").toInstant().getEpochSecond());
-      assertObjectEquals(expected.getTimestamp("TIMESTAMPTZ_COL").toEpochSecond(),
+      CustomAssertions.assertObjectEquals(expected.getTimestamp("TIMESTAMPTZ_COL").toEpochSecond(),
                          actual.getTimestamp("TIMESTAMPTZ_COL").toInstant().getEpochSecond());
-      assertObjectEquals(expected.getTimestamp("TIMESTAMPLTZ_COL").toEpochSecond(),
+      CustomAssertions.assertObjectEquals(expected.getTimestamp("TIMESTAMPLTZ_COL").toEpochSecond(),
                          actual.getTimestamp("TIMESTAMPLTZ_COL").toInstant().getEpochSecond());
     } catch (SQLException e) {
       e.printStackTrace();
@@ -176,14 +178,17 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
 
   private static final BiConsumer<StructuredRecord, ResultSet> COMPARE_DECIMALS = (expected, actual) -> {
     try {
-      assertObjectEquals(expected.getDecimal("ID"), actual.getBigDecimal("ID"));
-      assertObjectEquals(expected.getDecimal("INT_COL"), actual.getBigDecimal("INT_COL"));
-      assertObjectEquals(expected.getDecimal("INTEGER_COL"), actual.getBigDecimal("INTEGER_COL"));
-      assertObjectEquals(expected.getDecimal("DEC_COL"), actual.getBigDecimal("DEC_COL"));
-      assertObjectEquals(expected.getDecimal("DECIMAL_COL"), actual.getBigDecimal("DECIMAL_COL", SCALE));
-      assertObjectEquals(expected.getDecimal("NUMBER_COL"), actual.getBigDecimal("NUMBER_COL", SCALE));
-      assertObjectEquals(expected.getDecimal("NUMERIC_COL"), actual.getBigDecimal("NUMERIC_COL", SCALE));
-      assertObjectEquals(expected.getDecimal("SMALLINT_COL"), actual.getBigDecimal("SMALLINT_COL"));
+      CustomAssertions.assertObjectEquals(expected.getDecimal("ID"), actual.getBigDecimal("ID"));
+      CustomAssertions.assertObjectEquals(expected.getDecimal("INT_COL"), actual.getBigDecimal("INT_COL"));
+      CustomAssertions.assertObjectEquals(expected.getDecimal("INTEGER_COL"), actual.getBigDecimal("INTEGER_COL"));
+      CustomAssertions.assertObjectEquals(expected.getDecimal("DEC_COL"), actual.getBigDecimal("DEC_COL"));
+      CustomAssertions.assertObjectEquals(expected.getDecimal("DECIMAL_COL"),
+                                          actual.getBigDecimal("DECIMAL_COL", SCALE));
+      CustomAssertions.assertObjectEquals(expected.getDecimal("NUMBER_COL"),
+                                          actual.getBigDecimal("NUMBER_COL", SCALE));
+      CustomAssertions.assertObjectEquals(expected.getDecimal("NUMERIC_COL"),
+                                          actual.getBigDecimal("NUMERIC_COL", SCALE));
+      CustomAssertions.assertObjectEquals(expected.getDecimal("SMALLINT_COL"), actual.getBigDecimal("SMALLINT_COL"));
     } catch (SQLException e) {
       e.printStackTrace();
       Assert.fail(e.getMessage());
@@ -192,14 +197,14 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
 
   private static final BiConsumer<StructuredRecord, ResultSet> COMPARE_PRIMITIVES = (expected, actual) -> {
     try {
-      assertObjectEquals(expected.get("ID"), actual.getInt("ID"));
-      assertObjectEquals(expected.get("INT_COL"), actual.getInt("INT_COL"));
-      assertObjectEquals(expected.get("INTEGER_COL"), actual.getInt("INTEGER_COL"));
-      assertObjectEquals(expected.get("DEC_COL"), actual.getDouble("DEC_COL"));
-      assertObjectEquals(expected.get("DECIMAL_COL"), actual.getDouble("DECIMAL_COL"));
-      assertObjectEquals(expected.get("NUMBER_COL"), actual.getDouble("NUMBER_COL"));
-      assertObjectEquals(expected.get("NUMERIC_COL"), actual.getDouble("NUMERIC_COL"));
-      assertObjectEquals(expected.get("SMALLINT_COL"), actual.getLong("SMALLINT_COL"));
+      CustomAssertions.assertObjectEquals(expected.get("ID"), actual.getInt("ID"));
+      CustomAssertions.assertObjectEquals(expected.get("INT_COL"), actual.getInt("INT_COL"));
+      CustomAssertions.assertObjectEquals(expected.get("INTEGER_COL"), actual.getInt("INTEGER_COL"));
+      CustomAssertions.assertObjectEquals(expected.get("DEC_COL"), actual.getDouble("DEC_COL"));
+      CustomAssertions.assertObjectEquals(expected.get("DECIMAL_COL"), actual.getDouble("DECIMAL_COL"));
+      CustomAssertions.assertObjectEquals(expected.get("NUMBER_COL"), actual.getDouble("NUMBER_COL"));
+      CustomAssertions.assertObjectEquals(expected.get("NUMERIC_COL"), actual.getDouble("NUMERIC_COL"));
+      CustomAssertions.assertObjectEquals(expected.get("SMALLINT_COL"), actual.getLong("SMALLINT_COL"));
     } catch (SQLException e) {
       e.printStackTrace();
       Assert.fail(e.getMessage());
@@ -209,7 +214,7 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
   private static final BiConsumer<StructuredRecord, ResultSet> COMPARE_LONG_COLUMN = (expected, actual) -> {
     try {
       // Verify data
-      assertObjectEquals(expected.get("LONG_COL"), actual.getString("LONG_COL").trim());
+      CustomAssertions.assertObjectEquals(expected.get("LONG_COL"), actual.getString("LONG_COL").trim());
     } catch (SQLException e) {
       e.printStackTrace();
       Assert.fail(e.getMessage());
@@ -292,7 +297,7 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
     StructuredRecord record = StructuredRecord.builder(schema).set("ID", 1).build();
     BiConsumer<StructuredRecord, ResultSet> test = (expected, actual) -> {
       try {
-        assertObjectEquals(actual.getInt("ID"), 1);
+        CustomAssertions.assertObjectEquals(actual.getInt("ID"), 1);
       } catch (SQLException e) {
         e.printStackTrace();
         Assert.fail(e.getMessage());
@@ -309,7 +314,7 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
     StructuredRecord record = StructuredRecord.builder(schema).set("ID", 1).build();
     BiConsumer<StructuredRecord, ResultSet> test = (expected, actual) -> {
       try {
-        assertObjectEquals(actual.getInt("ID"), 1);
+        CustomAssertions.assertObjectEquals(actual.getInt("ID"), 1);
       } catch (SQLException e) {
         e.printStackTrace();
         Assert.fail(e.getMessage());

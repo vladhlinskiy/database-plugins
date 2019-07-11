@@ -18,8 +18,6 @@ package io.cdap.plugin.db;
 
 import org.junit.Assert;
 
-import java.util.Arrays;
-
 /**
  * Test util methods for custom assertions.
  */
@@ -29,7 +27,7 @@ public final class CustomAssertions {
    * The maximum delta between expected and actual floating point number for which both numbers are still considered
    * equal.
    */
-  public static final double DELTA = 0.01;
+  public static final double DELTA = 0.000001;
 
   private CustomAssertions() {
     throw new AssertionError("Should not instantiate static utility class.");
@@ -48,25 +46,6 @@ public final class CustomAssertions {
   }
 
   /**
-   * Reuses {@link Assert#assertArrayEquals(byte[], byte[])}.
-   * Asserts that values of two byte arrays are equal for the length of the expected one, since it's common that actual
-   * arrays are larger. If values are not equal size of actual array is less than size of expected,
-   * an {@link AssertionError} is thrown.
-   *
-   * @param expected byte array with expected values.
-   * @param actual   byte array with actual values
-   */
-  public static void assertBytesEquals(byte[] expected, byte[] actual) {
-    // handle the case when 'null' values passed
-    if (expected == null || actual == null) {
-      Assert.assertEquals(expected, actual);
-    } else {
-      Assert.assertTrue(actual.length >= expected.length);
-      Assert.assertArrayEquals(expected, Arrays.copyOf(actual, expected.length));
-    }
-  }
-
-  /**
    * Reuses {@link Assert#assertEquals(double, double, double)} with default {@link CustomAssertions#DELTA}.
    * Added to prevent repetitive casts to 'double' and specifying delta. Asserts that two doubles are equal to within
    * the delta. If they are not, an AssertionError is thrown with the given message.
@@ -75,7 +54,7 @@ public final class CustomAssertions {
    * @param actual   the value to check against expected
    */
   public static void assertNumericEquals(double expected, double actual) {
-    Assert.assertEquals(expected, actual, 0.01);
+    Assert.assertEquals(expected, actual, DELTA);
   }
 
   /**
@@ -87,6 +66,6 @@ public final class CustomAssertions {
    * @param actual   the value to check against expected
    */
   public static void assertNumericEquals(float expected, float actual) {
-    Assert.assertEquals(expected, actual, 0.01);
+    Assert.assertEquals(expected, actual, DELTA);
   }
 }
