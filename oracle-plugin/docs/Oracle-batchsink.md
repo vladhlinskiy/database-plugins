@@ -42,32 +42,39 @@ will be passed to the JDBC driver as connection arguments for JDBC drivers that 
 Data Types Mapping
 ----------
 
-    | Oracle Data Type               | CDAP Schema Data Type | Comment                |
-    | ------------------------------ | --------------------- | ---------------------- |
-    | VARCHAR2                       | string                |                        |
-    | NVARCHAR2                      | string                |                        |
-    | VARCHAR                        | string                |                        |
-    | NUMBER                         | decimal               |                        |
-    | FLOAT                          | double                |                        |
-    | LONG                           | string                |                        |
-    | DATE                           | timestamp             |                        |
-    | BINARY_FLOAT                   | float                 |                        |
-    | BINARY_DOUBLE                  | double                |                        |
-    | TIMESTAMP                      | timestamp             |                        |
-    | TIMESTAMP WITH TIME ZONE       | timestamp             | Converted to UTC time  |
-    | TIMESTAMP WITH LOCAL TIME ZONE | timestamp             |                        |
-    | INTERVAL YEAR TO MONTH         | string                |                        |
-    | INTERVAL DAY TO SECOND         | string                |                        |
-    | RAW                            | bytes                 |                        |
-    | LONG RAW                       | bytes                 |                        |
-    | ROWID                          | string                |                        |
-    | UROWID                         | string                |                        |
-    | CHAR                           | string                |                        |
-    | NCHAR                          | string                |                        |
-    | CLOB                           | string                |                        |
-    | NCLOB                          | string                |                        |
-    | BLOB                           | bytes                 |                        |
-    | BFILE                          | bytes                 |                        |
+    | Oracle Data Type               | CDAP Schema Data Type | Comment                                                |
+    | ------------------------------ | --------------------- | ------------------------------------------------------ |
+    | VARCHAR2                       | string                |                                                        |
+    | NVARCHAR2                      | string                |                                                        |
+    | VARCHAR                        | string                |                                                        |
+    | NUMBER                         | decimal               |                                                        |
+    | FLOAT                          | double                |                                                        |
+    | LONG                           | string                |                                                        |
+    | DATE                           | timestamp             |                                                        |
+    | BINARY_FLOAT                   | float                 |                                                        |
+    | BINARY_DOUBLE                  | double                |                                                        |
+    | TIMESTAMP                      | timestamp             |                                                        |
+    | TIMESTAMP WITH TIME ZONE       | string                | Timestamp string in the following format:              |
+    |                                |                       | "2019-07-15 15:57:46.65 GMT"                           |
+    | TIMESTAMP WITH LOCAL TIME ZONE | timestamp             |                                                        |
+    | INTERVAL YEAR TO MONTH         | string                | Oracle's 'INTERVAL YEAR TO MONTH' literal in the       |
+    |                                |                       | standard format: "year[-month]"                        |
+    | INTERVAL DAY TO SECOND         | string                | Oracle's 'INTERVAL DAY TO SECOND' literal in the       |
+    |                                |                       | standard format:                                       |
+    |                                |                       | "[day] [hour][:minutes][:seconds[.milliseconds]"       |
+    | RAW                            | bytes                 |                                                        |
+    | LONG RAW                       | bytes                 |                                                        |
+    | ROWID                          | string                |                                                        |
+    | UROWID                         | string                |                                                        |
+    | CHAR                           | string                |                                                        |
+    | NCHAR                          | string                |                                                        |
+    | CLOB                           | string                |                                                        |
+    | NCLOB                          | string                |                                                        |
+    | BLOB                           | bytes                 |                                                        |
+    | BFILE                          | bytes                 | BFILE is a data type used to store a locator (link)    |
+    |                                |                       | to an external file, which is stored outside of the    |
+    |                                |                       | database. Only the locator will be written to an       |
+    |                                |                       | Oracle table and not the content of the external file. |
 
 
 Example

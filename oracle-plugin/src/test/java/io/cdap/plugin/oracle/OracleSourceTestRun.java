@@ -86,7 +86,7 @@ public class OracleSourceTestRun extends OraclePluginTestBase {
       "DECIMAL_COL, NUMBER_COL, NUMERIC_COL, SMALLINT_COL, REAL_COL, DATE_COL, TIMESTAMP_COL, " +
       "INTERVAL_YEAR_TO_MONTH_COL, INTERVAL_DAY_TO_SECOND_COL, RAW_COL, TIMESTAMPTZ_COL, TIMESTAMPLTZ_COL, CLOB_COL, " +
       "NCLOB_COL, BLOB_COL, NCHAR_COL, FLOAT_COL, ROWID, ROWID_COL, UROWID_COL, BINARY_FLOAT_COL, BINARY_DOUBLE_COL, " +
-      "LONG_RAW_COL FROM my_table WHERE SMALLINT_COL < 3 AND $CONDITIONS";
+      "LONG_RAW_COL, BFILE_COL FROM my_table WHERE SMALLINT_COL < 3 AND $CONDITIONS";
     String boundingQuery = "SELECT MIN(SMALLINT_COL),MAX(SMALLINT_COL) from my_table";
     String splitBy = "SMALLINT_COL";
     ETLPlugin sourceConfig = new ETLPlugin(
@@ -180,7 +180,7 @@ public class OracleSourceTestRun extends OraclePluginTestBase {
     ZonedDateTime expectedTs = date.toInstant().atZone(UTC);
     Assert.assertEquals(expectedTs.withNano(0), row1.getTimestamp("DATE_COL"));
     Assert.assertEquals(expectedTs, row1.getTimestamp("TIMESTAMP_COL", UTC));
-    Assert.assertEquals(expectedTs, row1.getTimestamp("TIMESTAMPTZ_COL", UTC));
+    Assert.assertEquals("2019-07-15 15:57:46.65 GMT", row1.get("TIMESTAMPTZ_COL"));
     Assert.assertEquals(expectedTs, row1.getTimestamp("TIMESTAMPLTZ_COL", UTC));
 
     // Oracle specific types
@@ -202,6 +202,7 @@ public class OracleSourceTestRun extends OraclePluginTestBase {
     Assert.assertEquals(125.45f, (float) row2.get("BINARY_FLOAT_COL"), 0.000001);
     Assert.assertEquals(124.45, row1.get("BINARY_DOUBLE_COL"), 0.000001);
     Assert.assertEquals(125.45, row2.get("BINARY_DOUBLE_COL"), 0.000001);
+    Assert.assertArrayEquals(Bytes.getBytes(BFILE_VALUES.get(1)), Bytes.getBytes(row2.get("BFILE_COL")));
   }
 
   @Test

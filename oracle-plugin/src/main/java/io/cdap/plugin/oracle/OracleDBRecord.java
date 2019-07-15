@@ -19,12 +19,15 @@ package io.cdap.plugin.oracle;
 import io.cdap.cdap.api.common.Bytes;
 import io.cdap.cdap.api.data.format.StructuredRecord;
 import io.cdap.cdap.api.data.schema.Schema;
+import io.cdap.cdap.etl.api.validation.InvalidStageException;
 import io.cdap.plugin.db.ColumnType;
 import io.cdap.plugin.db.DBRecord;
 import io.cdap.plugin.db.SchemaReader;
 
+import java.lang.reflect.InvocationTargetException;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -34,6 +37,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
+import javax.annotation.Nullable;
 
 /**
  * Writable class for Oracle Source/Sink
@@ -96,6 +100,102 @@ public class OracleDBRecord extends DBRecord {
     }
   }
 
+  @Override
+  protected void writeToDB(PreparedStatement stmt, @Nullable Schema.Field field, int fieldIndex) throws SQLException {
+    int sqlType = columnTypes.get(fieldIndex).getType();
+    int sqlIndex = fieldIndex + 1;
+    switch (sqlType) {
+      case OracleSchemaReader.TIMESTAMP_TZ:
+        if (field != null && record.get(field.getName()) != null) {
+          // Set value of Oracle 'TIMESTAMP WITH TIME ZONE' data type as instance of 'oracle.sql.TIMESTAMPTZ',
+          // created from timestamp string, such as "2019-07-15 15:57:46.65 GMT".
+          String timestampString = record.get(field.getName());
+          Object timestampWithTimeZone = createOracleTimestampWithTimeZone(stmt.getConnection(), timestampString);
+          stmt.setObject(sqlIndex, timestampWithTimeZone);
+        } else {
+          stmt.setNull(sqlIndex, sqlType);
+        }
+        break;
+      case OracleSchemaReader.BFILE:
+        if (field != null && record.get(field.getName()) != null) {
+          // Set value of Oracle 'BFILE' data type as instance of 'oracle.sql.BFILE'.
+          // Note, that we create only locator (link) to an external binary file (file stored outside of the database)
+          // and not content of the file.
+          Object value = record.get(field.getName());
+          byte[] bytes = value instanceof ByteBuffer ? Bytes.toBytes((ByteBuffer) value) : (byte[]) value;
+          Object bfile = createOracleBfile(stmt.getConnection(), bytes);
+          stmt.setObject(sqlIndex, bfile);
+        } else {
+          stmt.setNull(sqlIndex, sqlType);
+        }
+        break;
+      default:
+        super.writeToDB(stmt, field, fieldIndex);
+    }
+  }
+
+  /**
+   * Creates an instance of 'oracle.sql.TIMESTAMPTZ' which corresponds to the specified timestamp with time zone string.
+   * @param connection sql connection.
+   * @param timestampString timestamp with time zone string, such as "2019-07-15 15:57:46.65 GMT".
+   * @return instance of 'oracle.sql.TIMESTAMPTZ' which corresponds to the specified timestamp with time zone string.
+   */
+  private Object createOracleTimestampWithTimeZone(Connection connection, String timestampString) {
+    try {
+      ClassLoader classLoader = connection.getClass().getClassLoader();
+      Class<?> timestampTZClass = classLoader.loadClass("oracle.sql.TIMESTAMPTZ");
+      return timestampTZClass.getConstructor(Connection.class, String.class).newInstance(connection, timestampString);
+    } catch (ClassNotFoundException e) {
+      throw new InvalidStageException("Unable to load 'oracle.sql.TIMESTAMPTZ'.", e);
+    } catch (InstantiationException | InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
+      throw new InvalidStageException("Unable to instantiate 'oracle.sql.TIMESTAMPTZ'.", e);
+    }
+  }
+
+  /**
+   * Creates an instance of 'oracle.sql.BFILE'. Note, that we can not create an operating system file that a 'BFILE'
+   * would refer to. <a href="https://docs.oracle.com/cd/B19306_01/java.102/b14355/oralob.htm#BABJJEIC">Those
+   * are created only externally.</a>
+   * @param connection sql connection.
+   * @param bytes BFILE locator's bytes.
+   * @return instance of 'oracle.sql.BFILE'.
+   */
+  private Object createOracleBfile(Connection connection, byte[] bytes) {
+    try {
+      ClassLoader classLoader = connection.getClass().getClassLoader();
+      Class<?> oracleConnectionClass = classLoader.loadClass("oracle.jdbc.OracleConnection");
+      Class<?> bfileClass = classLoader.loadClass("oracle.sql.BFILE");
+      return bfileClass.getConstructor(oracleConnectionClass, byte[].class).newInstance(connection, bytes);
+    } catch (ClassNotFoundException e) {
+      throw new InvalidStageException("Unable to load Oracle JDBC connector.", e);
+    } catch (InstantiationException | InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
+      throw new InvalidStageException("Unable to instantiate 'oracle.sql.BFILE'.", e);
+    }
+  }
+
+  /**
+   * Retrieves bytes representation of 'oracle.sql.BFILE' via 'oracle.sql.BFILE#getBytes'. Note, that this method
+   * retrieves only locator (link) to an external binary file (file stored outside of the database) and not content of
+   * the file. <a href="https://docs.oracle.com/cd/B19306_01/java.102/b14355/oralob.htm#BABJJEIC">Files are created
+   * only externally.</a>
+   * @param bfile instance of 'oracle.sql.BFILE'.
+   * @return bytes representation of 'oracle.sql.BFILE' obtained via 'oracle.sql.BFILE#getBytes'.
+   */
+  private byte[] getBfileBytes(ResultSet resultSet, Object bfile) {
+    if (bfile == null) {
+      return null;
+    }
+    try {
+      ClassLoader classLoader = resultSet.getClass().getClassLoader();
+      Class<?> bfileClass = classLoader.loadClass("oracle.sql.BFILE");
+      return (byte[]) bfileClass.getMethod("getBytes").invoke(bfile);
+    } catch (ClassNotFoundException e) {
+      throw new InvalidStageException("Unable to load 'oracle.sql.BFILE'.", e);
+    } catch (InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
+      throw new InvalidStageException("Error while invoking 'oracle.sql.BFILE#getBytes()'.", e);
+    }
+  }
+
   private void handleOracleSpecificType(ResultSet resultSet, StructuredRecord.Builder recordBuilder, Schema.Field field,
                                         int columnIndex, int sqlType, int precision, int scale)
     throws SQLException {
@@ -106,8 +206,10 @@ public class OracleDBRecord extends DBRecord {
       case Types.NCLOB:
         recordBuilder.set(field.getName(), resultSet.getString(columnIndex));
         break;
-      case OracleSchemaReader.TIMESTAMP_LTZ:
       case OracleSchemaReader.TIMESTAMP_TZ:
+        recordBuilder.set(field.getName(), resultSet.getString(columnIndex));
+        break;
+      case OracleSchemaReader.TIMESTAMP_LTZ:
         Instant instant = resultSet.getTimestamp(columnIndex).toInstant();
         recordBuilder.setTimestamp(field.getName(), instant.atZone(ZoneId.ofOffset("UTC", ZoneOffset.UTC)));
         break;
@@ -118,6 +220,11 @@ public class OracleDBRecord extends DBRecord {
         recordBuilder.set(field.getName(), resultSet.getDouble(columnIndex));
         break;
       case OracleSchemaReader.BFILE:
+        // Note, that ResultSet#getObject retrieves only locator (link) to an external binary file (file stored outside
+        // of the database) and not content of the file.
+        Object bfile = resultSet.getObject(columnIndex);
+        recordBuilder.set(field.getName(), getBfileBytes(resultSet, bfile));
+        break;
       case OracleSchemaReader.LONG_RAW:
         recordBuilder.set(field.getName(), resultSet.getBytes(columnIndex));
         break;

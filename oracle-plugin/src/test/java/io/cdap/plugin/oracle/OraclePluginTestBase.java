@@ -35,19 +35,23 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
 import java.sql.Clob;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.DriverManager;
 import java.sql.NClob;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TimeZone;
@@ -72,6 +76,8 @@ public class OraclePluginTestBase extends DatabasePluginTestBase {
   protected static final int PRECISION = 10;
   protected static final int SCALE = 6;
   protected static final ZoneId UTC = ZoneId.ofOffset("UTC", ZoneOffset.UTC);
+  protected static final List<ByteBuffer> BFILE_VALUES = new ArrayList<>();
+
   protected static boolean tearDown = true;
   private static int startCount;
 
@@ -177,7 +183,8 @@ public class OraclePluginTestBase extends DatabasePluginTestBase {
                      "  BINARY_DOUBLE_COL BINARY_DOUBLE," +
                      "  LONG_RAW_COL LONG RAW," +
                      "  ROWID_COL ROWID," +
-                     "  UROWID_COL UROWID" +
+                     "  UROWID_COL UROWID," +
+                     "  BFILE_COL BFILE" +
                      ")";
 
       String createTableWithLongFormat = "CREATE TABLE %s (" +
@@ -197,10 +204,13 @@ public class OraclePluginTestBase extends DatabasePluginTestBase {
   }
 
   protected static void prepareTestData(Connection conn) throws Exception {
-
-    String insertTableFormat = "INSERT INTO %s " +
-      "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?," +
-      "       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    // specify column names to exclude BFILE_COL, which will be set via BFILENAME function
+    String insertTableFormat = "INSERT INTO %s(ID, CHAR_COL, NCHAR_COL, CHARACTER_COL, VARCHAR_COL, VARCHAR2_COL, " +
+      "NVARCHAR2_COL, INT_COL, INTEGER_COL, DEC_COL, DECIMAL_COL, NUMBER_COL, NUMERIC_COL, SMALLINT_COL, REAL_COL, " +
+      "DATE_COL, TIMESTAMP_COL, TIMESTAMPTZ_COL, TIMESTAMPLTZ_COL, INTERVAL_YEAR_TO_MONTH_COL, " +
+      "INTERVAL_DAY_TO_SECOND_COL, RAW_COL, CLOB_COL, BLOB_COL, NCLOB_COL, FLOAT_COL, BINARY_FLOAT_COL, " +
+      "BINARY_DOUBLE_COL, LONG_RAW_COL, ROWID_COL, UROWID_COL) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, " +
+      "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     try (
       Statement stmt = conn.createStatement();
@@ -215,72 +225,95 @@ public class OraclePluginTestBase extends DatabasePluginTestBase {
       stmt.execute("insert into dbActionTest values (1, '1970-01-01')");
       stmt.execute("insert into postActionTest values (1, '1970-01-01')");
 
-      populateData(pStmt1, pStmt2);
+      populateData(pStmt1, MY_TABLE);
+      populateData(pStmt2, YOUR_TABLE);
       populateDataLong(pStmt3);
+    }
+    try (Statement stmt = conn.createStatement(); ResultSet resultSet =
+      stmt.executeQuery("SELECT ID, BFILE_COL FROM my_table ORDER BY ID")) {
+      while (resultSet.next()) {
+        Object bfile = resultSet.getObject("BFILE_COL");
+        BFILE_VALUES.add(ByteBuffer.wrap(getBfileBytes(bfile)));
+      }
     }
   }
 
-  private static void populateData(PreparedStatement... stmts) throws Exception {
+  private static void populateData(PreparedStatement pStmt, String tableName) throws Exception {
     // insert the same data into both tables: my_table and your_table
-    for (PreparedStatement pStmt : stmts) {
-      for (int i = 1; i <= 5; i++) {
-        Clob clob = null;
-        NClob nClob = null;
-        try {
-          String name = "user" + i;
-          pStmt.setInt(1, i);
-          pStmt.setString(2, name);
-          pStmt.setString(3, name);
-          pStmt.setString(4, name);
-          pStmt.setString(5, name);
-          pStmt.setString(6, name);
-          pStmt.setString(7, name);
-          pStmt.setInt(8, 42 + i);
-          pStmt.setInt(9, 24 + i);
-          pStmt.setBigDecimal(10, new BigDecimal(54.56 + i));
-          pStmt.setBigDecimal(11, new BigDecimal(54.65 + i));
-          pStmt.setBigDecimal(12, new BigDecimal(32.65 + i));
-          pStmt.setBigDecimal(13, new BigDecimal(23.65 + i));
-          pStmt.setInt(14, i);
-          pStmt.setFloat(15, (float) 14.45 + i);
-          pStmt.setDate(16, new Date(CURRENT_TS));
-          pStmt.setTimestamp(17, new Timestamp(CURRENT_TS));
-          pStmt.setTimestamp(18, new Timestamp(CURRENT_TS));
-          pStmt.setTimestamp(19, new Timestamp(CURRENT_TS));
-          pStmt.setString(20, "300-5");
-          pStmt.setString(21, "23 3:02:10");
-          pStmt.setBytes(22, name.getBytes());
+    for (int i = 1; i <= 5; i++) {
+      Clob clob = null;
+      NClob nClob = null;
+      try {
+        String name = "user" + i;
+        pStmt.setInt(1, i);
+        pStmt.setString(2, name);
+        pStmt.setString(3, name);
+        pStmt.setString(4, name);
+        pStmt.setString(5, name);
+        pStmt.setString(6, name);
+        pStmt.setString(7, name);
+        pStmt.setInt(8, 42 + i);
+        pStmt.setInt(9, 24 + i);
+        pStmt.setBigDecimal(10, new BigDecimal(54.56 + i));
+        pStmt.setBigDecimal(11, new BigDecimal(54.65 + i));
+        pStmt.setBigDecimal(12, new BigDecimal(32.65 + i));
+        pStmt.setBigDecimal(13, new BigDecimal(23.65 + i));
+        pStmt.setInt(14, i);
+        pStmt.setFloat(15, (float) 14.45 + i);
+        pStmt.setDate(16, new Date(CURRENT_TS));
+        pStmt.setTimestamp(17, new Timestamp(CURRENT_TS));
+        pStmt.setObject(18,
+                        createTimestampWithTimezone(pStmt.getConnection(), "2019-07-15 15:57:46.65 GMT"));
+        pStmt.setTimestamp(19, new Timestamp(CURRENT_TS));
+        pStmt.setString(20, "300-5");
+        pStmt.setString(21, "23 3:02:10");
+        pStmt.setBytes(22, name.getBytes());
 
-          clob = pStmt.getConnection().createClob();
-          clob.setString(1, name);
-          pStmt.setClob(23, clob);
+        clob = pStmt.getConnection().createClob();
+        clob.setString(1, name);
+        pStmt.setClob(23, clob);
 
-          pStmt.setBytes(24, name.getBytes());
+        pStmt.setBytes(24, name.getBytes());
 
-          nClob = pStmt.getConnection().createNClob();
-          nClob.setString(1, name);
-          pStmt.setNClob(25, nClob);
+        nClob = pStmt.getConnection().createNClob();
+        nClob.setString(1, name);
+        pStmt.setNClob(25, nClob);
 
-          pStmt.setFloat(26, (float) 123.45 + i);
-          pStmt.setFloat(27, (float) 123.45 + i);
-          pStmt.setDouble(28, 123.45 + i);
+        pStmt.setFloat(26, (float) 123.45 + i);
+        pStmt.setFloat(27, (float) 123.45 + i);
+        pStmt.setDouble(28, 123.45 + i);
 
-          pStmt.setBytes(29, name.getBytes());
-          pStmt.setString(30, "AAAUEVAAFAAAAR/AA" + i);
-          pStmt.setString(31, "AAAUEVAAFAAAAR/AA" + i);
+        pStmt.setBytes(29, name.getBytes());
+        pStmt.setString(30, "AAAUEVAAFAAAAR/AA" + i);
+        pStmt.setString(31, "AAAUEVAAFAAAAR/AA" + i);
 
-          pStmt.executeUpdate();
-        } finally {
-          if (Objects.nonNull(clob)) {
-            clob.free();
-          }
+        pStmt.executeUpdate();
 
-          if (Objects.nonNull(nClob)) {
-            nClob.free();
-          }
+        // Create BFILE locator (link) to an non-existing external binary file (file stored outside of the database).
+        // It's not possible to create an operating system file that a BFILE would refer to, those are created only
+        // externally. But it's possible to create a locator (link) to an non-existing file.
+        Statement stmt = pStmt.getConnection().createStatement();
+        stmt.execute("UPDATE " + tableName + " SET BFILE_COL=BFILENAME('ORACLE_HOME', 'test.txt') WHERE ID=" + i);
+      } finally {
+        if (Objects.nonNull(clob)) {
+          clob.free();
+        }
+
+        if (Objects.nonNull(nClob)) {
+          nClob.free();
         }
       }
     }
+  }
+
+  protected static byte[] getBfileBytes(Object bfile) throws Exception {
+    Class<?> bfileClass = Class.forName("oracle.sql.BFILE");
+    return (byte[]) bfileClass.getMethod("getBytes").invoke(bfile);
+  }
+
+  private static Object createTimestampWithTimezone(Connection connection, String timestampString) throws Exception {
+    Class<?> timestampTZClass = Class.forName("oracle.sql.TIMESTAMPTZ");
+    return timestampTZClass.getConstructor(Connection.class, String.class).newInstance(connection, timestampString);
   }
 
   private static void populateDataLong(PreparedStatement pStmt) throws SQLException {

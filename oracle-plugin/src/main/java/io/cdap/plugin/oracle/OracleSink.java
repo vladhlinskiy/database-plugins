@@ -63,8 +63,15 @@ public class OracleSink extends AbstractDBSink {
     Schema inputFieldNonNullableSchema = field.getSchema().isNullable()
       ? field.getSchema().getNonNullable()
       : field.getSchema();
-    // Handle the case when output schema expects decimal logical type but we got valid primitive.
-    // It's safe to write primitives as values of decimal logical type in the case of valid precision.
+    // Handle the case when explicit output schema expects decimal logical type but we got valid primitive.
+    // Since all Oracle numeric types are based on NUMBER(i.e. INTEGER type is actually NUMBER(38, 0)) we won't be able
+    // to use Oracle Sink Plugin with other sources. It's safe to write primitives as values of decimal logical type in
+    // the case of valid precision.
+    // Thus the following schema compatibility is supported:
+    // 1) Schema.Type.INT -> Schema.LogicalType.DECIMAL (if precision of actual decimal logical type >= 10)
+    // 2) Schema.Type.LONG -> Schema.LogicalType.DECIMAL (if precision of actual decimal logical type >= 19)
+    // 3) Schema.Type.FLOAT -> Schema.LogicalType.DECIMAL (primitive value can be rounded to match actual schema)
+    // 4) Schema.Type.DOUBLE -> Schema.LogicalType.DECIMAL (primitive value can be rounded to match actual schema)
     if (Schema.LogicalType.DECIMAL == outputFieldNonNullableSchema.getLogicalType()) {
       int precision = metadata.getPrecision(index);
       switch (inputFieldNonNullableSchema.getType()) {

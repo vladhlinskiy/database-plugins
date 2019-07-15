@@ -62,6 +62,7 @@ public class OracleSchemaReader extends CommonSchemaReader {
 
     switch (sqlType) {
       case TIMESTAMP_TZ:
+        return Schema.of(Schema.Type.STRING);
       case TIMESTAMP_LTZ:
         return Schema.of(Schema.LogicalType.TIMESTAMP_MICROS);
       case BINARY_FLOAT:
