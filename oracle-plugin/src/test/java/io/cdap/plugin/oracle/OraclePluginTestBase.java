@@ -245,7 +245,8 @@ public class OraclePluginTestBase extends DatabasePluginTestBase {
           pStmt.setFloat(15, (float) 14.45 + i);
           pStmt.setDate(16, new Date(CURRENT_TS));
           pStmt.setTimestamp(17, new Timestamp(CURRENT_TS));
-          pStmt.setTimestamp(18, new Timestamp(CURRENT_TS));
+          pStmt.setObject(18,
+                          createTimestampWithTimezone(pStmt.getConnection(), "2019-07-15 15:57:46.65 GMT"));
           pStmt.setTimestamp(19, new Timestamp(CURRENT_TS));
           pStmt.setString(20, "300-5");
           pStmt.setString(21, "23 3:02:10");
@@ -281,6 +282,11 @@ public class OraclePluginTestBase extends DatabasePluginTestBase {
         }
       }
     }
+  }
+
+  private static Object createTimestampWithTimezone(Connection connection, String timestampString) throws Exception {
+    Class<?> timestampTZClass = Class.forName("oracle.sql.TIMESTAMPTZ");
+    return timestampTZClass.getConstructor(Connection.class, String.class).newInstance(connection, timestampString);
   }
 
   private static void populateDataLong(PreparedStatement pStmt) throws SQLException {

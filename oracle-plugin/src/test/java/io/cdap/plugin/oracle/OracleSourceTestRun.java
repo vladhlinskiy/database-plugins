@@ -180,7 +180,7 @@ public class OracleSourceTestRun extends OraclePluginTestBase {
     ZonedDateTime expectedTs = date.toInstant().atZone(UTC);
     Assert.assertEquals(expectedTs.withNano(0), row1.getTimestamp("DATE_COL"));
     Assert.assertEquals(expectedTs, row1.getTimestamp("TIMESTAMP_COL", UTC));
-    Assert.assertEquals(expectedTs, row1.getTimestamp("TIMESTAMPTZ_COL", UTC));
+    Assert.assertEquals("2019-07-15 15:57:46.65 GMT", row1.get("TIMESTAMPTZ_COL"));
     Assert.assertEquals(expectedTs, row1.getTimestamp("TIMESTAMPLTZ_COL", UTC));
 
     // Oracle specific types

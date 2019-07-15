@@ -20,6 +20,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import io.cdap.cdap.api.annotation.Description;
 import io.cdap.cdap.api.annotation.Macro;
 import io.cdap.cdap.api.annotation.Name;
@@ -78,8 +79,9 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
   private static final Logger LOG = LoggerFactory.getLogger(AbstractDBSink.class);
 
   private final DBSinkConfig dbSinkConfig;
-  private Class<? extends Driver> driverClass;
   private DriverCleanup driverCleanup;
+  protected Class<? extends Driver> driverClass;
+  protected List<String> columns;
   protected List<ColumnType> columnTypes;
   protected String dbColumns;
   private Schema outputSchema;
@@ -164,14 +166,11 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
    *
    */
   protected void setColumnsInfo(List<Schema.Field> fields) {
-    columnTypes = fields.stream()
+    columns = fields.stream()
       .map(Schema.Field::getName)
-      .map(ColumnType::new)
       .collect(Collectors.collectingAndThen(Collectors.toList(), Collections::unmodifiableList));
 
-    dbColumns = columnTypes.stream()
-      .map(ColumnType::getName)
-      .collect(Collectors.joining(","));
+    dbColumns = String.join(",", columns);
   }
 
   @Override
@@ -232,9 +231,7 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
 
   @VisibleForTesting
   public void setColumns(List<String> columns) {
-    this.columnTypes = columns.stream()
-      .map(ColumnType::new)
-      .collect(Collectors.collectingAndThen(Collectors.toList(), Collections::unmodifiableList));
+    this.columns = ImmutableList.copyOf(columns);
   }
 
   private void setResultSetMetadata() throws Exception {
@@ -264,11 +261,12 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
       }
     }
 
-    columnTypes.forEach(columnType -> {
-      String name = columnType.getName();
-      Preconditions.checkArgument(columnToType.containsKey(name), "Missing column '%s' in SQL table", name);
-      columnType.setType(columnToType.get(name));
-    });
+    this.columnTypes = columns.stream()
+      .map(name -> {
+        Preconditions.checkArgument(columnToType.containsKey(name), "Missing column '%s' in SQL table", name);
+        return new ColumnType(name, columnToType.get(name));
+      })
+      .collect(Collectors.collectingAndThen(Collectors.toList(), Collections::unmodifiableList));
   }
 
   private void validateSchema(Class<? extends Driver> jdbcDriverClass, String tableName, Schema inputSchema) {

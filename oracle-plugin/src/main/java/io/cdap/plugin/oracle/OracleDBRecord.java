@@ -19,12 +19,16 @@ package io.cdap.plugin.oracle;
 import io.cdap.cdap.api.common.Bytes;
 import io.cdap.cdap.api.data.format.StructuredRecord;
 import io.cdap.cdap.api.data.schema.Schema;
+import io.cdap.cdap.etl.api.validation.InvalidStageException;
 import io.cdap.plugin.db.ColumnType;
 import io.cdap.plugin.db.DBRecord;
 import io.cdap.plugin.db.SchemaReader;
 
+import java.lang.reflect.InvocationTargetException;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
+import java.sql.Connection;
+import java.sql.Driver;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -34,13 +38,17 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
+import javax.annotation.Nullable;
 
 /**
  * Writable class for Oracle Source/Sink
  */
 public class OracleDBRecord extends DBRecord {
 
-  public OracleDBRecord(StructuredRecord record, List<ColumnType> columnTypes) {
+  private Class<? extends Driver> driverClass;
+
+  public OracleDBRecord(Class<? extends Driver> driverClass, StructuredRecord record, List<ColumnType> columnTypes) {
+    this.driverClass = driverClass;
     this.record = record;
     this.columnTypes = columnTypes;
   }
@@ -96,6 +104,38 @@ public class OracleDBRecord extends DBRecord {
     }
   }
 
+  @Override
+  protected void writeToDB(PreparedStatement stmt, @Nullable Schema.Field field, int fieldIndex) throws SQLException {
+    int sqlType = columnTypes.get(fieldIndex).getType();
+    int sqlIndex = fieldIndex + 1;
+    switch (sqlType) {
+      case OracleSchemaReader.TIMESTAMP_TZ:
+        if (field != null && record.get(field.getName()) != null) {
+          String timestampString = record.get(field.getName());
+          try {
+            // Set value of Oracle 'TIMESTAMP WITH TIME ZONE' data type as instance of 'oracle.sql.TIMESTAMPTZ',
+            // created from timestamp string, such as "2019-07-15 15:57:46.65 GMT".
+            ClassLoader classLoader = driverClass.getClassLoader();
+            Class<?> timestampWithTimeZoneClass = classLoader.loadClass("oracle.sql.TIMESTAMPTZ");
+            Object timestampWithTimeZone = timestampWithTimeZoneClass.getConstructor(Connection.class, String.class)
+              .newInstance(stmt.getConnection(), timestampString);
+            stmt.setObject(sqlIndex, timestampWithTimeZone);
+          } catch (ClassNotFoundException e) {
+            throw new InvalidStageException("Unable to load 'oracle.sql.TIMESTAMPTZ'.", e);
+          } catch (InstantiationException | InvocationTargetException | NoSuchMethodException |
+            IllegalAccessException e) {
+            throw new InvalidStageException(String.format("Unable to instantiate 'oracle.sql.TIMESTAMPTZ' from '%s' " +
+                                                            "timestamp string.", timestampString), e);
+          }
+        } else {
+          stmt.setNull(sqlIndex, sqlType);
+        }
+        break;
+      default:
+        super.writeToDB(stmt, field, fieldIndex);
+    }
+  }
+
   private void handleOracleSpecificType(ResultSet resultSet, StructuredRecord.Builder recordBuilder, Schema.Field field,
                                         int columnIndex, int sqlType, int precision, int scale)
     throws SQLException {
@@ -106,8 +146,10 @@ public class OracleDBRecord extends DBRecord {
       case Types.NCLOB:
         recordBuilder.set(field.getName(), resultSet.getString(columnIndex));
         break;
-      case OracleSchemaReader.TIMESTAMP_LTZ:
       case OracleSchemaReader.TIMESTAMP_TZ:
+        recordBuilder.set(field.getName(), resultSet.getString(columnIndex));
+        break;
+      case OracleSchemaReader.TIMESTAMP_LTZ:
         Instant instant = resultSet.getTimestamp(columnIndex).toInstant();
         recordBuilder.setTimestamp(field.getName(), instant.atZone(ZoneId.ofOffset("UTC", ZoneOffset.UTC)));
         break;

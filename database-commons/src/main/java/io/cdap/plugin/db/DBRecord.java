@@ -44,6 +44,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
+import javax.annotation.Nullable;
 import javax.sql.rowset.serial.SerialBlob;
 
 /**
@@ -203,13 +204,7 @@ public class DBRecord implements Writable, DBWritable, Configurable {
     for (int i = 0; i < columnTypes.size(); i++) {
       ColumnType columnType = columnTypes.get(i);
       Schema.Field field = record.getSchema().getField(columnType.getName());
-      if (field != null) {
-        writeToDB(stmt, field, i);
-      } else {
-        // Some of the fields can be absent in the record
-        int sqlIndex = i + 1;
-        stmt.setNull(sqlIndex, columnType.getType());
-      }
+      writeToDB(stmt, field, i);
     }
   }
 
@@ -268,13 +263,21 @@ public class DBRecord implements Writable, DBWritable, Configurable {
     }
   }
 
-  private void writeToDB(PreparedStatement stmt, Schema.Field field, int fieldIndex) throws SQLException {
+  protected void writeToDB(PreparedStatement stmt, @Nullable Schema.Field field, int fieldIndex) throws SQLException {
+
+    int sqlIndex = fieldIndex + 1;
+    int sqlType = columnTypes.get(fieldIndex).getType();
+    if (field == null) {
+      // Some of the fields can be absent in the record
+      stmt.setNull(sqlIndex, sqlType);
+      return;
+    }
+
     String fieldName = field.getName();
     Schema fieldSchema = getNonNullableSchema(field);
     Schema.Type fieldType = fieldSchema.getType();
     Schema.LogicalType fieldLogicalType = fieldSchema.getLogicalType();
     Object fieldValue = record.get(fieldName);
-    int sqlIndex = fieldIndex + 1;
 
     if (fieldValue == null) {
       stmt.setNull(sqlIndex, columnTypes.get(fieldIndex).getType());

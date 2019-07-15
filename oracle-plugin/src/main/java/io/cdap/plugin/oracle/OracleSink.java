@@ -51,7 +51,7 @@ public class OracleSink extends AbstractDBSink {
 
   @Override
   protected DBRecord getDBRecord(StructuredRecord output) {
-    return new OracleDBRecord(output, columnTypes);
+    return new OracleDBRecord(driverClass, output, columnTypes);
   }
 
   @Override

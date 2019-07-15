@@ -54,7 +54,7 @@ Data Types Mapping
     | BINARY_FLOAT                   | float                 |                        |
     | BINARY_DOUBLE                  | double                |                        |
     | TIMESTAMP                      | timestamp             |                        |
-    | TIMESTAMP WITH TIME ZONE       | timestamp             | Converted to UTC time  |
+    | TIMESTAMP WITH TIME ZONE       | string                |                        |
     | TIMESTAMP WITH LOCAL TIME ZONE | timestamp             |                        |
     | INTERVAL YEAR TO MONTH         | string                |                        |
     | INTERVAL DAY TO SECOND         | string                |                        |

@@ -75,7 +75,7 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
     Schema.Field.of("LONG_RAW_COL", Schema.of(Schema.Type.BYTES)),
     Schema.Field.of("ROWID_COL", Schema.of(Schema.Type.STRING)),
     Schema.Field.of("UROWID_COL", Schema.of(Schema.Type.STRING)),
-    Schema.Field.of("TIMESTAMPTZ_COL", Schema.of(Schema.LogicalType.TIMESTAMP_MICROS)),
+    Schema.Field.of("TIMESTAMPTZ_COL", Schema.of(Schema.Type.STRING)),
     Schema.Field.of("TIMESTAMPLTZ_COL", Schema.of(Schema.LogicalType.TIMESTAMP_MICROS))
   );
 
@@ -166,8 +166,7 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
                          actual.getTimestamp("DATE_COL").toInstant().getEpochSecond());
       CustomAssertions.assertObjectEquals(expected.getTimestamp("TIMESTAMP_COL").toEpochSecond(),
                          actual.getTimestamp("TIMESTAMP_COL").toInstant().getEpochSecond());
-      CustomAssertions.assertObjectEquals(expected.getTimestamp("TIMESTAMPTZ_COL").toEpochSecond(),
-                         actual.getTimestamp("TIMESTAMPTZ_COL").toInstant().getEpochSecond());
+      CustomAssertions.assertObjectEquals(expected.get("TIMESTAMPTZ_COL"), actual.getString("TIMESTAMPTZ_COL"));
       CustomAssertions.assertObjectEquals(expected.getTimestamp("TIMESTAMPLTZ_COL").toEpochSecond(),
                          actual.getTimestamp("TIMESTAMPLTZ_COL").toInstant().getEpochSecond());
     } catch (SQLException e) {
@@ -425,7 +424,7 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
         .set("BINARY_DOUBLE_COL", 3.14d)
         .set("ROWID_COL", "AAAUEVAAFAAAAR/AA" + i)
         .set("UROWID_COL", "AAAUEVAAFAAAAR/AA" + i)
-        .setTimestamp("TIMESTAMPTZ_COL", localDateTime.atZone(UTC))
+        .set("TIMESTAMPTZ_COL", "2019-07-15 15:57:46.65 GMT")
         .setTimestamp("TIMESTAMPLTZ_COL", localDateTime.atZone(UTC));
 
       inputRecords.add(builder.build());
@@ -469,7 +468,7 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
         .set("BINARY_DOUBLE_COL", 3.14d)
         .set("ROWID_COL", "AAAUEVAAFAAAAR/AA" + i)
         .set("UROWID_COL", "AAAUEVAAFAAAAR/AA" + i)
-        .setTimestamp("TIMESTAMPTZ_COL", localDateTime.atZone(UTC))
+        .set("TIMESTAMPTZ_COL", "2019-07-15 15:57:46.65 GMT")
         .setTimestamp("TIMESTAMPLTZ_COL", localDateTime.atZone(UTC));
 
       inputRecords.add(builder.build());

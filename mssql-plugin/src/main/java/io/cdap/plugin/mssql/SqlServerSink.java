@@ -60,8 +60,8 @@ public class SqlServerSink extends AbstractDBSink {
   }
 
   @Override
-  protected DBRecord getDBRecord(StructuredRecord.Builder output) {
-    return new SqlServerSinkDBRecord(output.build(), columnTypes);
+  protected DBRecord getDBRecord(StructuredRecord output) {
+    return new SqlServerSinkDBRecord(output, columnTypes);
   }
 
   @Override
