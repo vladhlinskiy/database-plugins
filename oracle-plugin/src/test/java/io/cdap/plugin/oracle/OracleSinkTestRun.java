@@ -18,7 +18,6 @@ package io.cdap.plugin.oracle;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import io.cdap.cdap.api.common.Bytes;
 import io.cdap.cdap.api.data.format.StructuredRecord;
 import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.cdap.api.dataset.table.Table;
@@ -77,8 +76,7 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
     Schema.Field.of("ROWID_COL", Schema.of(Schema.Type.STRING)),
     Schema.Field.of("UROWID_COL", Schema.of(Schema.Type.STRING)),
     Schema.Field.of("TIMESTAMPTZ_COL", Schema.of(Schema.Type.STRING)),
-    Schema.Field.of("TIMESTAMPLTZ_COL", Schema.of(Schema.LogicalType.TIMESTAMP_MICROS)),
-    Schema.Field.of("BFILE_COL", Schema.of(Schema.Type.BYTES))
+    Schema.Field.of("TIMESTAMPLTZ_COL", Schema.of(Schema.LogicalType.TIMESTAMP_MICROS))
   );
 
   /**
@@ -171,8 +169,6 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
       CustomAssertions.assertObjectEquals(expected.get("TIMESTAMPTZ_COL"), actual.getString("TIMESTAMPTZ_COL"));
       CustomAssertions.assertObjectEquals(expected.getTimestamp("TIMESTAMPLTZ_COL").toEpochSecond(),
                          actual.getTimestamp("TIMESTAMPLTZ_COL").toInstant().getEpochSecond());
-
-      Assert.assertArrayEquals(expected.get("BFILE_COL"), getBfileBytes(actual.getObject("BFILE_COL")));
     } catch (Exception e) {
       e.printStackTrace();
       Assert.fail(e.getMessage());
@@ -429,8 +425,7 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
         .set("ROWID_COL", "AAAUEVAAFAAAAR/AA" + i)
         .set("UROWID_COL", "AAAUEVAAFAAAAR/AA" + i)
         .set("TIMESTAMPTZ_COL", "2019-07-15 15:57:46.65 GMT")
-        .setTimestamp("TIMESTAMPLTZ_COL", localDateTime.atZone(UTC))
-        .set("BFILE_COL", Bytes.getBytes(BFILE_VALUES.get(i)));
+        .setTimestamp("TIMESTAMPLTZ_COL", localDateTime.atZone(UTC));
 
       inputRecords.add(builder.build());
     }
@@ -474,8 +469,7 @@ public class OracleSinkTestRun extends OraclePluginTestBase {
         .set("ROWID_COL", "AAAUEVAAFAAAAR/AA" + i)
         .set("UROWID_COL", "AAAUEVAAFAAAAR/AA" + i)
         .set("TIMESTAMPTZ_COL", "2019-07-15 15:57:46.65 GMT")
-        .setTimestamp("TIMESTAMPLTZ_COL", localDateTime.atZone(UTC))
-        .set("BFILE_COL", Bytes.getBytes(BFILE_VALUES.get(i)));
+        .setTimestamp("TIMESTAMPLTZ_COL", localDateTime.atZone(UTC));
 
       inputRecords.add(builder.build());
     }

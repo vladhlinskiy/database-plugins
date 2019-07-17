@@ -51,7 +51,7 @@ public class OracleSink extends AbstractDBSink {
 
   @Override
   protected DBRecord getDBRecord(StructuredRecord output) {
-    return new OracleDBRecord(output, columnTypes);
+    return new OracleSinkDBRecord(output, columnTypes);
   }
 
   @Override
@@ -90,7 +90,7 @@ public class OracleSink extends AbstractDBSink {
         default:
           return super.isFieldCompatible(field, metadata, index);
       }
-    } else if (OracleSchemaReader.ORACLE_TYPES.contains(metadata.getColumnType(index))) {
+    } else if (OracleSinkSchemaReader.ORACLE_TYPES.contains(metadata.getColumnType(index))) {
       return Objects.equals(inputFieldNonNullableSchema.getType(), outputFieldNonNullableSchema.getType()) &&
         Objects.equals(inputFieldNonNullableSchema.getLogicalType(), outputFieldNonNullableSchema.getLogicalType());
     } else {
@@ -100,7 +100,7 @@ public class OracleSink extends AbstractDBSink {
 
   @Override
   protected SchemaReader getSchemaReader() {
-    return new OracleSchemaReader();
+    return new OracleSinkSchemaReader();
   }
 
   /**

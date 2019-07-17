@@ -202,7 +202,7 @@ public class OracleSourceTestRun extends OraclePluginTestBase {
     Assert.assertEquals(125.45f, (float) row2.get("BINARY_FLOAT_COL"), 0.000001);
     Assert.assertEquals(124.45, row1.get("BINARY_DOUBLE_COL"), 0.000001);
     Assert.assertEquals(125.45, row2.get("BINARY_DOUBLE_COL"), 0.000001);
-    Assert.assertArrayEquals(Bytes.getBytes(BFILE_VALUES.get(1)), Bytes.getBytes(row2.get("BFILE_COL")));
+    Assert.assertNull(row2.get("BFILE_COL"));
   }
 
   @Test

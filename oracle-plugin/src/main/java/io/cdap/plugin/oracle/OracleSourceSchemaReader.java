@@ -26,9 +26,9 @@ import java.sql.Types;
 import java.util.Set;
 
 /**
- * Oracle schema reader.
+ * Oracle Source schema reader.
  */
-public class OracleSchemaReader extends CommonSchemaReader {
+public class OracleSourceSchemaReader extends CommonSchemaReader {
   /**
    * Oracle type constants, from Oracle JDBC Implementation.
    */

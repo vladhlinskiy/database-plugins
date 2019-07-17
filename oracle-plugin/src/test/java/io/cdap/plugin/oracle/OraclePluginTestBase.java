@@ -35,23 +35,19 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 
 import java.math.BigDecimal;
-import java.nio.ByteBuffer;
 import java.sql.Clob;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.DriverManager;
 import java.sql.NClob;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TimeZone;
@@ -76,7 +72,6 @@ public class OraclePluginTestBase extends DatabasePluginTestBase {
   protected static final int PRECISION = 10;
   protected static final int SCALE = 6;
   protected static final ZoneId UTC = ZoneId.ofOffset("UTC", ZoneOffset.UTC);
-  protected static final List<ByteBuffer> BFILE_VALUES = new ArrayList<>();
 
   protected static boolean tearDown = true;
   private static int startCount;
@@ -229,13 +224,6 @@ public class OraclePluginTestBase extends DatabasePluginTestBase {
       populateData(pStmt2, YOUR_TABLE);
       populateDataLong(pStmt3);
     }
-    try (Statement stmt = conn.createStatement(); ResultSet resultSet =
-      stmt.executeQuery("SELECT ID, BFILE_COL FROM my_table ORDER BY ID")) {
-      while (resultSet.next()) {
-        Object bfile = resultSet.getObject("BFILE_COL");
-        BFILE_VALUES.add(ByteBuffer.wrap(getBfileBytes(bfile)));
-      }
-    }
   }
 
   private static void populateData(PreparedStatement pStmt, String tableName) throws Exception {
@@ -289,11 +277,13 @@ public class OraclePluginTestBase extends DatabasePluginTestBase {
 
         pStmt.executeUpdate();
 
-        // Create BFILE locator (link) to an non-existing external binary file (file stored outside of the database).
+        // Create BFILE locator (link) to an nonexistent external binary file (file stored outside of the database).
         // It's not possible to create an operating system file that a BFILE would refer to, those are created only
         // externally. But it's possible to create a locator (link) to an non-existing file.
         Statement stmt = pStmt.getConnection().createStatement();
-        stmt.execute("UPDATE " + tableName + " SET BFILE_COL=BFILENAME('ORACLE_HOME', 'test.txt') WHERE ID=" + i);
+        String setBfileStmt = String.format("UPDATE %s SET BFILE_COL=BFILENAME('ORACLE_HOME', 'nonexistent.txt') " +
+                                              "WHERE ID=%d", tableName, i);
+        stmt.execute(setBfileStmt);
       } finally {
         if (Objects.nonNull(clob)) {
           clob.free();

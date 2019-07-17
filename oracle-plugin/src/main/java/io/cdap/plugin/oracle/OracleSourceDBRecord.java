@@ -16,6 +16,7 @@
 
 package io.cdap.plugin.oracle;
 
+import com.google.common.io.ByteStreams;
 import io.cdap.cdap.api.common.Bytes;
 import io.cdap.cdap.api.data.format.StructuredRecord;
 import io.cdap.cdap.api.data.schema.Schema;
@@ -24,6 +25,8 @@ import io.cdap.plugin.db.ColumnType;
 import io.cdap.plugin.db.DBRecord;
 import io.cdap.plugin.db.SchemaReader;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
@@ -40,11 +43,12 @@ import java.util.List;
 import javax.annotation.Nullable;
 
 /**
- * Writable class for Oracle Source/Sink
+ * Oracle Source implementation {@link org.apache.hadoop.mapreduce.lib.db.DBWritable} and
+ * {@link org.apache.hadoop.io.Writable}.
  */
-public class OracleDBRecord extends DBRecord {
+public class OracleSourceDBRecord extends DBRecord {
 
-  public OracleDBRecord(StructuredRecord record, List<ColumnType> columnTypes) {
+  public OracleSourceDBRecord(StructuredRecord record, List<ColumnType> columnTypes) {
     this.record = record;
     this.columnTypes = columnTypes;
   }
@@ -53,12 +57,13 @@ public class OracleDBRecord extends DBRecord {
    * Used in map-reduce. Do not remove.
    */
   @SuppressWarnings("unused")
-  public OracleDBRecord() {
+  public OracleSourceDBRecord() {
+    // Required by Hadoop DBRecordReader to create an instance
   }
 
   @Override
   protected SchemaReader getSchemaReader() {
-    return new OracleSchemaReader();
+    return new OracleSourceSchemaReader();
   }
 
   /**
@@ -93,7 +98,7 @@ public class OracleDBRecord extends DBRecord {
   @Override
   protected void handleField(ResultSet resultSet, StructuredRecord.Builder recordBuilder, Schema.Field field,
                              int columnIndex, int sqlType, int sqlPrecision, int sqlScale) throws SQLException {
-    if (OracleSchemaReader.ORACLE_TYPES.contains(sqlType) || sqlType == Types.NCLOB) {
+    if (OracleSourceSchemaReader.ORACLE_TYPES.contains(sqlType) || sqlType == Types.NCLOB) {
       handleOracleSpecificType(resultSet, recordBuilder, field, columnIndex, sqlType, sqlPrecision, sqlScale);
     } else {
       setField(resultSet, recordBuilder, field, columnIndex, sqlType, sqlPrecision, sqlScale);
@@ -105,26 +110,13 @@ public class OracleDBRecord extends DBRecord {
     int sqlType = columnTypes.get(fieldIndex).getType();
     int sqlIndex = fieldIndex + 1;
     switch (sqlType) {
-      case OracleSchemaReader.TIMESTAMP_TZ:
+      case OracleSourceSchemaReader.TIMESTAMP_TZ:
         if (field != null && record.get(field.getName()) != null) {
           // Set value of Oracle 'TIMESTAMP WITH TIME ZONE' data type as instance of 'oracle.sql.TIMESTAMPTZ',
           // created from timestamp string, such as "2019-07-15 15:57:46.65 GMT".
           String timestampString = record.get(field.getName());
           Object timestampWithTimeZone = createOracleTimestampWithTimeZone(stmt.getConnection(), timestampString);
           stmt.setObject(sqlIndex, timestampWithTimeZone);
-        } else {
-          stmt.setNull(sqlIndex, sqlType);
-        }
-        break;
-      case OracleSchemaReader.BFILE:
-        if (field != null && record.get(field.getName()) != null) {
-          // Set value of Oracle 'BFILE' data type as instance of 'oracle.sql.BFILE'.
-          // Note, that we create only locator (link) to an external binary file (file stored outside of the database)
-          // and not content of the file.
-          Object value = record.get(field.getName());
-          byte[] bytes = value instanceof ByteBuffer ? Bytes.toBytes((ByteBuffer) value) : (byte[]) value;
-          Object bfile = createOracleBfile(stmt.getConnection(), bytes);
-          stmt.setObject(sqlIndex, bfile);
         } else {
           stmt.setNull(sqlIndex, sqlType);
         }
@@ -153,46 +145,35 @@ public class OracleDBRecord extends DBRecord {
   }
 
   /**
-   * Creates an instance of 'oracle.sql.BFILE'. Note, that we can not create an operating system file that a 'BFILE'
-   * would refer to. <a href="https://docs.oracle.com/cd/B19306_01/java.102/b14355/oralob.htm#BABJJEIC">Those
-   * are created only externally.</a>
-   * @param connection sql connection.
-   * @param bytes BFILE locator's bytes.
-   * @return instance of 'oracle.sql.BFILE'.
+   * Retrieves the contents of the BFILE.
+   * @param resultSet sql result set.
+   * @param columnName BFILE column name.
+   * @return bytes contents of the BFILE.
    */
-  private Object createOracleBfile(Connection connection, byte[] bytes) {
-    try {
-      ClassLoader classLoader = connection.getClass().getClassLoader();
-      Class<?> oracleConnectionClass = classLoader.loadClass("oracle.jdbc.OracleConnection");
-      Class<?> bfileClass = classLoader.loadClass("oracle.sql.BFILE");
-      return bfileClass.getConstructor(oracleConnectionClass, byte[].class).newInstance(connection, bytes);
-    } catch (ClassNotFoundException e) {
-      throw new InvalidStageException("Unable to load Oracle JDBC connector.", e);
-    } catch (InstantiationException | InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
-      throw new InvalidStageException("Unable to instantiate 'oracle.sql.BFILE'.", e);
-    }
-  }
-
-  /**
-   * Retrieves bytes representation of 'oracle.sql.BFILE' via 'oracle.sql.BFILE#getBytes'. Note, that this method
-   * retrieves only locator (link) to an external binary file (file stored outside of the database) and not content of
-   * the file. <a href="https://docs.oracle.com/cd/B19306_01/java.102/b14355/oralob.htm#BABJJEIC">Files are created
-   * only externally.</a>
-   * @param bfile instance of 'oracle.sql.BFILE'.
-   * @return bytes representation of 'oracle.sql.BFILE' obtained via 'oracle.sql.BFILE#getBytes'.
-   */
-  private byte[] getBfileBytes(ResultSet resultSet, Object bfile) {
+  private byte[] getBfileBytes(ResultSet resultSet, String columnName) throws SQLException {
+    Object bfile = resultSet.getObject(columnName);
     if (bfile == null) {
       return null;
     }
     try {
       ClassLoader classLoader = resultSet.getClass().getClassLoader();
-      Class<?> bfileClass = classLoader.loadClass("oracle.sql.BFILE");
-      return (byte[]) bfileClass.getMethod("getBytes").invoke(bfile);
-    } catch (ClassNotFoundException e) {
-      throw new InvalidStageException("Unable to load 'oracle.sql.BFILE'.", e);
-    } catch (InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
-      throw new InvalidStageException("Error while invoking 'oracle.sql.BFILE#getBytes()'.", e);
+      Class<?> oracleBfileClass = classLoader.loadClass("oracle.jdbc.OracleBfile");
+      boolean isFileExist = (boolean) oracleBfileClass.getMethod("fileExists").invoke(bfile);
+      if (!isFileExist) {
+        return null;
+      }
+
+      oracleBfileClass.getMethod("openFile").invoke(bfile);
+      InputStream binaryStream = (InputStream) oracleBfileClass.getMethod("getBinaryStream").invoke(bfile);
+      byte[] bytes = ByteStreams.toByteArray(binaryStream);
+      oracleBfileClass.getMethod("closeFile").invoke(bfile);
+      return bytes;
+    } catch (ClassNotFoundException | InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
+      throw new InvalidStageException(String.format("Column '%s' is of type 'BFILE', which is not supported with " +
+                                                      "this version of the JDBC driver.", columnName), e);
+    } catch (IOException e) {
+      throw new InvalidStageException(String.format("Error reading the contents of the BFILE at column '%s'.",
+                                                    columnName), e);
     }
   }
 
@@ -200,32 +181,30 @@ public class OracleDBRecord extends DBRecord {
                                         int columnIndex, int sqlType, int precision, int scale)
     throws SQLException {
     switch (sqlType) {
-      case OracleSchemaReader.INTERVAL_YM:
-      case OracleSchemaReader.INTERVAL_DS:
-      case OracleSchemaReader.LONG:
+      case OracleSourceSchemaReader.INTERVAL_YM:
+      case OracleSourceSchemaReader.INTERVAL_DS:
+      case OracleSourceSchemaReader.LONG:
       case Types.NCLOB:
         recordBuilder.set(field.getName(), resultSet.getString(columnIndex));
         break;
-      case OracleSchemaReader.TIMESTAMP_TZ:
+      case OracleSourceSchemaReader.TIMESTAMP_TZ:
         recordBuilder.set(field.getName(), resultSet.getString(columnIndex));
         break;
-      case OracleSchemaReader.TIMESTAMP_LTZ:
+      case OracleSourceSchemaReader.TIMESTAMP_LTZ:
         Instant instant = resultSet.getTimestamp(columnIndex).toInstant();
         recordBuilder.setTimestamp(field.getName(), instant.atZone(ZoneId.ofOffset("UTC", ZoneOffset.UTC)));
         break;
-      case OracleSchemaReader.BINARY_FLOAT:
+      case OracleSourceSchemaReader.BINARY_FLOAT:
         recordBuilder.set(field.getName(), resultSet.getFloat(columnIndex));
         break;
-      case OracleSchemaReader.BINARY_DOUBLE:
+      case OracleSourceSchemaReader.BINARY_DOUBLE:
         recordBuilder.set(field.getName(), resultSet.getDouble(columnIndex));
         break;
-      case OracleSchemaReader.BFILE:
-        // Note, that ResultSet#getObject retrieves only locator (link) to an external binary file (file stored outside
-        // of the database) and not content of the file.
-        Object bfile = resultSet.getObject(columnIndex);
-        recordBuilder.set(field.getName(), getBfileBytes(resultSet, bfile));
+      case OracleSourceSchemaReader.BFILE:
+        String columnName = resultSet.getMetaData().getColumnName(columnIndex);
+        recordBuilder.set(field.getName(), getBfileBytes(resultSet, columnName));
         break;
-      case OracleSchemaReader.LONG_RAW:
+      case OracleSourceSchemaReader.LONG_RAW:
         recordBuilder.set(field.getName(), resultSet.getBytes(columnIndex));
         break;
       case Types.DECIMAL:
@@ -244,7 +223,7 @@ public class OracleDBRecord extends DBRecord {
   }
 
   private boolean isLongOrLongRaw(int columnType) {
-    return columnType == OracleSchemaReader.LONG || columnType == OracleSchemaReader.LONG_RAW;
+    return columnType == OracleSourceSchemaReader.LONG || columnType == OracleSourceSchemaReader.LONG_RAW;
   }
 
   private void readField(int index, ResultSetMetaData metadata, ResultSet resultSet, Schema schema,
