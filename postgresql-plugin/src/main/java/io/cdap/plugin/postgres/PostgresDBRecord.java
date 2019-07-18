@@ -18,6 +18,7 @@ package io.cdap.plugin.postgres;
 
 import io.cdap.cdap.api.data.format.StructuredRecord;
 import io.cdap.cdap.api.data.schema.Schema;
+import io.cdap.plugin.db.ColumnType;
 import io.cdap.plugin.db.DBRecord;
 import io.cdap.plugin.db.SchemaReader;
 
@@ -27,6 +28,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.List;
 
 import static io.cdap.plugin.postgres.PostgresSchemaReader.STRING_MAPPED_POSTGRES_TYPES;
 
@@ -35,7 +37,7 @@ import static io.cdap.plugin.postgres.PostgresSchemaReader.STRING_MAPPED_POSTGRE
  */
 public class PostgresDBRecord extends DBRecord {
 
-  public PostgresDBRecord(StructuredRecord record, int[] columnTypes) {
+  public PostgresDBRecord(StructuredRecord record, List<ColumnType> columnTypes) {
     super(record, columnTypes);
   }
 
@@ -85,11 +87,12 @@ public class PostgresDBRecord extends DBRecord {
   @Override
   protected void writeToDB(PreparedStatement stmt, Schema.Field field, int fieldIndex) throws SQLException {
     int sqlIndex = fieldIndex + 1;
-    ResultSetMetaData metadata = stmt.getMetaData();
-    if (STRING_MAPPED_POSTGRES_TYPES.contains(metadata.getColumnType(sqlIndex)) ||
-      "money".equals(metadata.getColumnTypeName(sqlIndex)) ||
-      "bit".equals(metadata.getColumnTypeName(sqlIndex))) {
-      stmt.setObject(sqlIndex, createPGobject(metadata.getColumnTypeName(sqlIndex),
+    ColumnType columnType = columnTypes.get(fieldIndex);
+    if (STRING_MAPPED_POSTGRES_TYPES.contains(columnType.getType()) ||
+      "money".equals(columnType.getTypeName()) ||
+      "bit".equals(columnType.getTypeName()) ||
+      "timetz".equals(columnType.getTypeName())) {
+      stmt.setObject(sqlIndex, createPGobject(columnType.getTypeName(),
                                               record.get(field.getName()),
                                               stmt.getClass().getClassLoader()));
     } else {

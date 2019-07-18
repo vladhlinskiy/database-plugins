@@ -38,6 +38,7 @@ import io.cdap.plugin.common.LineageRecorder;
 import io.cdap.plugin.common.ReferenceBatchSink;
 import io.cdap.plugin.common.ReferencePluginConfig;
 import io.cdap.plugin.common.batch.sink.SinkOutputFormatProvider;
+import io.cdap.plugin.db.ColumnType;
 import io.cdap.plugin.db.CommonSchemaReader;
 import io.cdap.plugin.db.ConnectionConfig;
 import io.cdap.plugin.db.ConnectionConfigAccessor;
@@ -80,8 +81,8 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
   private final DBSinkConfig dbSinkConfig;
   private Class<? extends Driver> driverClass;
   private DriverCleanup driverCleanup;
-  protected int[] columnTypes;
   protected List<String> columns;
+  protected List<ColumnType> columnTypes;
   protected String dbColumns;
   private Schema outputSchema;
 
@@ -247,6 +248,7 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
 
   private void setResultSetMetadata() throws Exception {
     Map<String, Integer> columnToType = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+    Map<String, String> columnToTypeName = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     String connectionString = dbSinkConfig.getConnectionString();
 
     driverCleanup = DBUtils.ensureJDBCDriverIsAvailable(driverClass, connectionString, dbSinkConfig.jdbcPluginName);
@@ -266,18 +268,20 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
         // JDBC driver column indices start with 1
         for (int i = 0; i < rs.getMetaData().getColumnCount(); i++) {
           String name = resultSetMetadata.getColumnName(i + 1);
+          String typeName = resultSetMetadata.getColumnTypeName(i +1);
           int type = resultSetMetadata.getColumnType(i + 1);
           columnToType.put(name, type);
+          columnToTypeName.put(name, typeName);
         }
       }
     }
 
-    columnTypes = new int[columns.size()];
-    for (int i = 0; i < columnTypes.length; i++) {
-      String name = columns.get(i);
-      Preconditions.checkArgument(columnToType.containsKey(name), "Missing column '%s' in SQL table", name);
-      columnTypes[i] = columnToType.get(name);
-    }
+    this.columnTypes = columns.stream()
+      .map(name -> {
+        Preconditions.checkArgument(columnToType.containsKey(name), "Missing column '%s' in SQL table", name);
+        return new ColumnType(name, columnToTypeName.get(name), columnToType.get(name));
+      })
+      .collect(Collectors.collectingAndThen(Collectors.toList(), Collections::unmodifiableList));
   }
 
   private void validateSchema(Class<? extends Driver> jdbcDriverClass, String tableName, Schema inputSchema) {

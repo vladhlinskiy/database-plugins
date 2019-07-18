@@ -18,6 +18,7 @@ package io.cdap.plugin.oracle;
 
 import io.cdap.cdap.api.data.format.StructuredRecord;
 import io.cdap.cdap.api.data.schema.Schema;
+import io.cdap.plugin.db.ColumnType;
 import io.cdap.plugin.db.DBRecord;
 import io.cdap.plugin.db.SchemaReader;
 
@@ -27,13 +28,14 @@ import java.sql.Types;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.List;
 
 /**
  * Writable class for Oracle Source/Sink
  */
 public class OracleDBRecord extends DBRecord {
 
-  public OracleDBRecord(StructuredRecord record, int[] columnTypes) {
+  public OracleDBRecord(StructuredRecord record, List<ColumnType> columnTypes) {
     this.record = record;
     this.columnTypes = columnTypes;
   }
