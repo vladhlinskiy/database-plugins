@@ -68,7 +68,16 @@ public class PostgresPluginTestBase extends DatabasePluginTestBase {
   protected static final int PRECISION = 10;
   protected static final int SCALE = 6;
   protected static boolean tearDown = true;
-  protected static final OffsetDateTime OFFSET_TIME = OffsetDateTime.of(1992, 3, 11, 12, 0, 10, 0, ZoneOffset.of("+03"));
+  protected static final OffsetDateTime OFFSET_TIME = OffsetDateTime.of(
+    1992,
+    3,
+    11,
+    12,
+    0,
+    10,
+    0,
+    ZoneOffset.of("+03")
+  );
   private static int startCount;
 
   @ClassRule
@@ -205,7 +214,7 @@ public class PostgresPluginTestBase extends DatabasePluginTestBase {
     }
   }
 
-  private static void populateData(PreparedStatement ...stmts) throws SQLException {
+  private static void populateData(PreparedStatement... stmts) throws SQLException {
     // insert the same data into both tables: my_table and your_table
     for (PreparedStatement pStmt : stmts) {
       for (int i = 1; i <= 5; i++) {
@@ -265,7 +274,7 @@ public class PostgresPluginTestBase extends DatabasePluginTestBase {
   }
 
   private static PGobject createPGObject(String type, String value) throws SQLException {
-    PGobject result =  new PGobject();
+    PGobject result = new PGobject();
     result.setType(type);
     result.setValue(value);
     return result;

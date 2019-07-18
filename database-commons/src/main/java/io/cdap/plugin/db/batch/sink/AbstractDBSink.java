@@ -268,7 +268,7 @@ public abstract class AbstractDBSink extends ReferenceBatchSink<StructuredRecord
         // JDBC driver column indices start with 1
         for (int i = 0; i < rs.getMetaData().getColumnCount(); i++) {
           String name = resultSetMetadata.getColumnName(i + 1);
-          String typeName = resultSetMetadata.getColumnTypeName(i +1);
+          String typeName = resultSetMetadata.getColumnTypeName(i + 1);
           int type = resultSetMetadata.getColumnType(i + 1);
           columnToType.put(name, type);
           columnToTypeName.put(name, typeName);
